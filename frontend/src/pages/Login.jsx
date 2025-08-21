@@ -24,7 +24,7 @@ export default function Login(){
     <div className="pz-auth">
       <div className="pz-card-auth">
         <div className="pz-auth-head">
-          <span className="pz-logo">🍕</span>
+          <span className="pz-logo"></span>
           <div>
             <h3>Bienvenido</h3>
             <p>Inicia sesión para continuar</p>

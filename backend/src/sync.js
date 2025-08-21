@@ -8,7 +8,7 @@ import bcrypt from "bcryptjs";
 (async () => {
   try {
     await sequelize.sync({ force: true }); 
-    console.log("Base de datos sincronizada ✅");
+    console.log("Base de datos sincronizada");
 
     const pass = await bcrypt.hash("admin123", 10);
     await User.create({
@@ -62,10 +62,10 @@ import bcrypt from "bcryptjs";
       },
     ]);
 
-    console.log("Datos iniciales insertados ✅");
+    console.log("Datos iniciales insertados ");
     process.exit(0);
   } catch (err) {
-    console.error("Error al sincronizar la base de datos ❌:", err);
+    console.error("Error al sincronizar la base de datos :", err);
     process.exit(1);
   }
 })();

@@ -10,7 +10,7 @@ export default function Navbar() {
   return (
     <header className="pz-header">
       <div className="pz-header__left">
-        <Link to="/" className="pz-brand">🍕 Pizzas</Link>
+        <Link to="/" className="pz-brand">Pizzas</Link>
         <nav className="pz-nav">
           <Link to="/" className={pathname === "/" ? "active" : ""}>Menú</Link>
           <Link to="/reservar" className={pathname === "/reservar" ? "active" : ""}>Reservar</Link>

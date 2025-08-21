@@ -9,14 +9,12 @@ export function CartProvider({ children }) {
     catch { return []; }
   });
 
-  // <<< NUEVO: mensaje corto al agregar
   const [flash, setFlash] = useState(null);
   const showFlash = (msg) => {
     setFlash(msg);
     clearTimeout(showFlash._t);
     showFlash._t = setTimeout(() => setFlash(null), 2000);
   };
-  // >>>
 
   useEffect(() => { localStorage.setItem("cart:v1", JSON.stringify(items)); }, [items]);
 

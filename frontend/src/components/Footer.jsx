@@ -5,7 +5,7 @@ export default function Footer() {
         <div>
           <h4 className="pz-footer-title">El kratos</h4>
           <p>Auténtica pizza al horno de leña desde 1998.</p>
-          <p className="pz-dim">© {new Date().getFullYear()} La Nonna. Todos los derechos reservados.</p>
+          <p className="pz-dim"> {new Date().getFullYear()} Todos los derechos reservados.</p>
         </div>
 
         <div>
@@ -20,9 +20,9 @@ export default function Footer() {
         <div>
           <h5 className="pz-footer-sub">Contacto</h5>
           <ul className="pz-list">
-            <li>📍 Zona 10, Ciudad de Guatemala</li>
-            <li>☎️ (502) 5555-1234</li>
-            <li>✉️ pedidos@lannonna.gt</li>
+            <li> Zona 10, Ciudad de Guatemala</li>
+            <li> (502) 5555-1234</li>
+            <li> pedidos@pizza.gt</li>
           </ul>
         </div>
       </div>
