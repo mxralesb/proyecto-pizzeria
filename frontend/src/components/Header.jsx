@@ -26,6 +26,14 @@ export default function Header() {
           <NavLink to="/reservar" className="pz-link">Reservar</NavLink>
           {user && <NavLink to="/mis-reservas" className="pz-link">Mis reservas</NavLink>}
           {user?.role === "admin" && <NavLink to="/admin" className="pz-link">Admin</NavLink>}
+
+          {user?.role === "admin" && (
+            <>
+              <NavLink to="/empleados" className="pz-link">Empleados</NavLink>
+              <NavLink to="/orders" className="pz-link">Órdenes</NavLink>
+              <NavLink to="/delivery" className="pz-link">Delivery</NavLink>
+            </>
+          )}
         </nav>
 
         <div className="pz-actions">

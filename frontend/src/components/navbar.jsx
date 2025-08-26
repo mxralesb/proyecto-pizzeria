@@ -20,6 +20,20 @@ export default function Navbar() {
               Mis reservas
             </Link>
           )}
+
+          {user?.role === "admin" && (
+            <>
+              <Link to="/empleados" className={pathname === "/empleados" ? "active" : ""}>
+                Empleados
+              </Link>
+              <Link to="/orders" className={pathname === "/orders" ? "active" : ""}>
+                Órdenes
+              </Link>
+              <Link to="/delivery" className={pathname === "/delivery" ? "active" : ""}>
+                Delivery
+              </Link>
+            </>
+          )}
         </nav>
       </div>
       <div className="pz-header__right">

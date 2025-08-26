@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 
 export default function Login(){
   const { login } = useAuth();
-  const [email,setEmail]=useState("admin@pizza.com");
-  const [password,setPassword]=useState("admin123");
+  const [email,setEmail]=useState("ivan@pizzeria.com");
+  const [password,setPassword]=useState("IvanAdmin1234");
   const [err,setErr]=useState("");
   const [loading,setLoading]=useState(false);
 

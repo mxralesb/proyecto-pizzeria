@@ -7,8 +7,11 @@ export const User = sequelize.define("User", {
   email: { type: DataTypes.STRING, unique: true, allowNull: false },
   password: { type: DataTypes.STRING, allowNull: false },
   role: { 
-    type: DataTypes.ENUM("cliente","recepcionista","cocinero","repartidor","admin"),
+    type: DataTypes.ENUM("cliente","cajero","cocinero","mesero","repartidor","admin"),
     defaultValue: "cliente"
   },
   branch: { type: DataTypes.STRING }
+}, {
+  tableName: "users",
+  freezeTableName: false
 });
