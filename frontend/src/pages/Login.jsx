@@ -48,8 +48,15 @@ export default function Login(){
         </form>
 
         <div className="pz-auth-foot">
+          <div>
           <span>¿Olvidaste tu contraseña?</span>
           <Link to="/recuperar" className="pz-link-minor">Recuperar</Link>
+        </div>
+
+        <div>
+          <span>¿Aún no tienes cuenta?</span>
+          <Link to="/register" className="pz-link-minor">Registrarse</Link>
+        </div>
         </div>
       </div>
     </div>

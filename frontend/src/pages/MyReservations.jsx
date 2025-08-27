@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/client";
 
-const today = () => new Date().toISOString().slice(0, 10); 
+const today = () => new Date().toISOString().slice(0, 10);
 
 export default function Reserve() {
   const [rows, setRows] = useState([]);
@@ -13,6 +13,10 @@ export default function Reserve() {
 
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 👇 ahora el default es folio DESC
+  const [sortConfig, setSortConfig] = useState({ key: "id", direction: "asc" });
+  const [search, setSearch] = useState("");
 
   const errors = useMemo(() => {
     const e = {};
@@ -57,113 +61,167 @@ export default function Reserve() {
     load();
   };
 
+  const sortedRows = useMemo(() => {
+    let sortable = [...rows];
+    if (sortConfig !== null) {
+      sortable.sort((a, b) => {
+        if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === "asc" ? -1 : 1;
+        if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
+    return sortable;
+  }, [rows, sortConfig]);
+
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return sortedRows;
+    return sortedRows.filter(r =>
+      r.name.toLowerCase().includes(search.toLowerCase()) ||
+      r.dpi.includes(search)
+    );
+  }, [search, sortedRows]);
+
+  const requestSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIndicator = (key) => {
+    if (sortConfig.key === key) {
+      return sortConfig.direction === "asc" ? "▲" : "▼";
+    }
+    return "⇅";
+  };
+
   return (
-    <div className="pz-reserve">
-      <h2>Reservar mesa</h2>
+    <div style={{ maxWidth: "900px", margin: "0 auto", padding: "20px", fontFamily: "Arial, sans-serif" }}>
+      <h2 style={{ textAlign: "center", marginBottom: "20px", color: "#333" }}>Reservar mesa</h2>
 
-      <form className="pz-form" onSubmit={submit}>
-        <div className="pz-field">
-          <label>Nombre</label>
+      {/* Formulario */}
+      <div style={{ background: "#f9f9f9", padding: "20px", borderRadius: "12px", marginBottom: "30px", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
+        <form onSubmit={submit} style={{ display: "grid", gap: "15px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+            <div>
+              <label>Nombre</label>
+              <input
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: errors.name ? "1px solid red" : "1px solid #ccc" }}
+                type="text"
+                value={name}
+                onChange={e=>setName(e.target.value)}
+                placeholder="Nombre de la reserva"
+              />
+              {errors.name && <div style={{ color: "red", fontSize: "12px" }}>{errors.name}</div>}
+            </div>
+
+            <div>
+              <label>DPI</label>
+              <input
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: errors.dpi ? "1px solid red" : "1px solid #ccc" }}
+                type="text"
+                value={dpi}
+                onChange={e=>setDpi(e.target.value.replace(/\D/g,"").slice(0,13))}
+                placeholder="13 dígitos"
+              />
+              {errors.dpi && <div style={{ color: "red", fontSize: "12px" }}>{errors.dpi}</div>}
+            </div>
+
+            <div>
+              <label>Fecha</label>
+              <input
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: errors.date ? "1px solid red" : "1px solid #ccc" }}
+                type="date"
+                min={today()}
+                value={date}
+                onChange={e=>setDate(e.target.value)}
+              />
+              {errors.date && <div style={{ color: "red", fontSize: "12px" }}>{errors.date}</div>}
+            </div>
+
+            <div>
+              <label>Hora</label>
+              <input
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: errors.time ? "1px solid red" : "1px solid #ccc" }}
+                type="time"
+                step="1800"          
+                value={time}
+                onChange={e=>setTime(e.target.value)}
+              />
+              {errors.time && <div style={{ color: "red", fontSize: "12px" }}>{errors.time}</div>}
+            </div>
+
+            <div>
+              <label>Personas</label>
+              <input
+                style={{ width: "100%", padding: "8px", borderRadius: "6px", border: errors.people ? "1px solid red" : "1px solid #ccc" }}
+                type="number"
+                min={1}
+                max={12}
+                value={people}
+                onChange={e=>setPeople(e.target.value)}
+              />
+              {errors.people && <div style={{ color: "red", fontSize: "12px" }}>{errors.people}</div>}
+            </div>
+          </div>
+
+          <div style={{ textAlign: "center" }}>
+            <button
+              style={{ background: "#4CAF50", color: "#fff", padding: "10px 20px", border: "none", borderRadius: "8px", cursor: "pointer" }}
+              disabled={Object.keys(errors).length>0}
+            >
+              Guardar
+            </button>
+          </div>
+
+          {msg && <div style={{ textAlign: "center", color: "green", marginTop: "10px" }}>{msg}</div>}
+        </form>
+      </div>
+
+      {/* Tabla */}
+      <div style={{ background: "#fff", padding: "20px", borderRadius: "12px", boxShadow: "0 2px 6px rgba(0,0,0,0.1)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
+          <h3 style={{ margin: 0, color: "#333" }}>Últimas reservas</h3>
           <input
-            className={`pz-input ${errors.name ? "is-invalid": ""}`}
             type="text"
-            value={name}
-            onChange={e=>setName(e.target.value)}
-            placeholder="Nombre de la reserva"
-            autoComplete="off"
+            style={{ padding: "8px", borderRadius: "6px", border: "1px solid #ccc", width: "250px" }}
+            placeholder="Buscar por nombre o DPI..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
           />
-          {errors.name && <div className="pz-error">{errors.name}</div>}
         </div>
 
-        <div className="pz-field">
-          <label>DPI</label>
-          <input
-            className={`pz-input ${errors.dpi ? "is-invalid": ""}`}
-            type="text"
-            inputMode="numeric"
-            maxLength={13}
-            value={dpi}
-            onChange={e=>setDpi(e.target.value.replace(/\D/g,"").slice(0,13))}
-            placeholder="13 dígitos"
-            autoComplete="off"
-          />
-          {errors.dpi && <div className="pz-error">{errors.dpi}</div>}
-        </div>
-
-        <div className="pz-field">
-          <label>Fecha</label>
-          <input
-            className={`pz-input ${errors.date ? "is-invalid": ""}`}
-            type="date"
-            min={today()}
-            value={date}
-            onChange={e=>setDate(e.target.value)}
-          />
-          {errors.date && <div className="pz-error">{errors.date}</div>}
-        </div>
-
-        <div className="pz-field">
-          <label>Hora</label>
-          <input
-            className={`pz-input ${errors.time ? "is-invalid": ""}`}
-            type="time"
-            step="1800"          
-            value={time}
-            onChange={e=>setTime(e.target.value)}
-          />
-          {errors.time && <div className="pz-error">{errors.time}</div>}
-        </div>
-
-        <div className="pz-field">
-          <label>Personas</label>
-          <input
-            className={`pz-input ${errors.people ? "is-invalid": ""}`}
-            type="number"
-            min={1}
-            max={12}
-            value={people}
-            onChange={e=>setPeople(e.target.value)}
-          />
-          {errors.people && <div className="pz-error">{errors.people}</div>}
-        </div>
-
-        <div className="pz-actions">
-          <button className="pz-btn pz-btn-primary" disabled={Object.keys(errors).length>0}>Guardar</button>
-        </div>
-
-        {msg && <div className="pz-alert ok">{msg}</div>}
-      </form>
-
-      <h3>Últimas reservas</h3>
-      <div className="pz-table-wrap">
-        <table className="pz-table">
-          <thead>
-            <tr>
-              <th>Folio</th>
-              <th>Nombre</th>
-              <th>DPI</th>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Personas</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && <tr><td colSpan={6} className="pz-empty">Cargando…</td></tr>}
-            {!loading && rows.length===0 && (
-              <tr><td colSpan={6} className="pz-empty">Sin reservas registradas</td></tr>
-            )}
-            {!loading && rows.map(b=>(
-              <tr key={b.id}>
-                <td>#{b.id}</td>
-                <td>{b.name}</td>
-                <td>{b.dpi}</td>
-                <td>{b.date}</td>
-                <td>{String(b.time).slice(0,5)}</td>
-                <td>{b.people}</td>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f0f0f0", textAlign: "left" }}>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("id")}>Folio {getSortIndicator("id")}</th>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("name")}>Nombre {getSortIndicator("name")}</th>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("dpi")}>DPI {getSortIndicator("dpi")}</th>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("date")}>Fecha {getSortIndicator("date")}</th>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("time")}>Hora {getSortIndicator("time")}</th>
+                <th style={{ padding: "10px", cursor: "pointer" }} onClick={() => requestSort("people")}>Personas {getSortIndicator("people")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading && <tr><td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>Cargando…</td></tr>}
+              {!loading && filteredRows.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: "center", padding: "20px" }}>Sin reservas encontradas</td></tr>
+              )}
+              {!loading && filteredRows.map((b, i) => (
+                <tr key={b.id} style={{ background: i % 2 === 0 ? "#fafafa" : "#fff" }}>
+                  <td style={{ padding: "8px", fontWeight: "bold" }}>#{b.id}</td>
+                  <td style={{ padding: "8px" }}>{b.name}</td>
+                  <td style={{ padding: "8px" }}>{b.dpi}</td>
+                  <td style={{ padding: "8px" }}>{b.date}</td>
+                  <td style={{ padding: "8px" }}>{String(b.time).slice(0, 5)}</td>
+                  <td style={{ padding: "8px" }}>{b.people}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

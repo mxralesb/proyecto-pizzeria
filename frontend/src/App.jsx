@@ -13,6 +13,7 @@ import MyReservations from "./pages/MyReservations";
 import Employee from "./pages/Employee";
 import Orders from "./pages/Orders"; 
 import Delivery from "./pages/Delivery";
+import Register from "./pages/Register";
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
               <Route path="/empleados" element={<Employee />} />
               <Route path="/orders" element={<Orders />} />
               <Route path="/delivery" element={<Delivery />} />
+              <Route path="/register" element={<Register />} />
             </Routes>
             <CartPanel />
             <CartFab />

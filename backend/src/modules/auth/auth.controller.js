@@ -3,16 +3,39 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { User } from "../../models/user.js";
 import { sendMail } from "../../utils/mailer.js";
+import { ClienteProfile } from "../../models/clienteProfile.js";
 
-export const register = async (req,res)=>{
-  try{
-    const { name, email, password, role } = req.body;
-    const exists = await User.findOne({ where:{ email }});
-    if(exists) return res.status(400).json({ error:"Email ya existe" });
-    const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, email, password: hash, role });
-    res.json({ id:user.id, name:user.name, email:user.email, role:user.role });
-  }catch(e){ res.status(500).json({ error:e.message }); }
+
+// REGISTRO DE CLIENTE
+export const register = async (req, res) => {
+  try {
+    const { email, password, role, clienteProfile } = req.body;
+
+    // Verificar si ya existe el email
+    const existing = await User.findOne({ where: { email } });
+    if (existing) return res.status(400).json({ error: "El correo ya está registrado" });
+
+    // Encriptar password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Crear usuario
+    const newUser = await User.create(
+      {
+        email,
+        password: hashedPassword,
+        role: role || "cliente",
+        ClienteProfile: clienteProfile
+      },
+      {
+        include: [ClienteProfile] // importante para crear el perfil junto con el user
+      }
+    );
+
+    return res.json({ message: "Usuario registrado con éxito", user: newUser });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
 };
 
 export const login = async (req,res)=>{

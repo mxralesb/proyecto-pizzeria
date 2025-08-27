@@ -3,6 +3,24 @@ import api from "../api/client";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+// Genera horarios cada 5 min entre 07:00 y 21:30
+const generateTimes = () => {
+  const times = [];
+  for (let h = 7; h <= 21; h++) {
+    for (let m = 0; m < 60; m += 5) {
+      if (h === 21 && m > 30) break; // límite hasta 21:30
+      const hh = h.toString().padStart(2, "0");
+      const mm = m.toString().padStart(2, "0");
+      const time24 = `${hh}:${mm}`;
+      const hour12 = new Date(`1970-01-01T${time24}:00`)
+        .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      times.push({ value: time24, label: hour12 });
+    }
+  }
+  return times;
+};
+const times = generateTimes();
+
 export default function Reserve() {
   const [name, setName] = useState("");
   const [dpi, setDpi] = useState("");
@@ -88,13 +106,23 @@ export default function Reserve() {
 
         <div className="pz-field">
           <label>Hora</label>
-          <input
-            className={`pz-input ${errors.time ? "is-invalid" : ""}`}
-            type="time"
-            step="1800"
+          <select
+            className={`pz-input fancy-select ${errors.time ? "is-invalid" : ""}`}
             value={time}
             onChange={(e) => setTime(e.target.value)}
-          />
+          >
+            {Array.from(new Set(times.map((t) => t.value.split(":")[0]))).map((hour) => (
+              <optgroup key={hour} label={`${hour}:00`}>
+                {times
+                  .filter((t) => t.value.startsWith(hour))
+                  .map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+              </optgroup>
+            ))}
+          </select>
           {errors.time && <div className="pz-error">{errors.time}</div>}
         </div>
 
