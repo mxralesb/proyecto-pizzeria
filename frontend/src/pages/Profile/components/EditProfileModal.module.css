@@ -1,0 +1,4 @@
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:50; }
+.card { background:#fff; width:420px; max-width:calc(100% - 32px); border-radius:12px; padding:16px; display:grid; gap:8px; }
+.actions { display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
+.primary { background:#e54848; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }

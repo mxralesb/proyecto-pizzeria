@@ -1,0 +1,83 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.brand {
+  font-weight: bold;
+  font-size: 20px;
+  text-decoration: none;
+  color: #e63946;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav a {
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+}
+
+.nav a.active {
+  color: #e63946;
+  border-bottom: 2px solid #e63946;
+  padding-bottom: 2px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cartbtn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #e63946;
+  color: white;
+  border-radius: 50%;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.btnOutline {
+  padding: 6px 12px;
+  border: 1px solid #e63946;
+  border-radius: 4px;
+  background: white;
+  color: #e63946;
+  text-decoration: none;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.user {
+  font-size: 14px;
+  color: #555;
+}

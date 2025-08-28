@@ -1,7 +1,77 @@
+// backend/src/models/index.js
 import { sequelize } from "../config/database.js";
+
 import { User } from "./user.js";
 import { MenuItem } from "./menuItem.js";
 import { Reservation } from "./reservation.js";
+import { EmployeeRole } from "./employeeRole.js";
+import { Employee } from "./employee.js";
 
+import { Cliente } from "./cliente.js";
+import { Direccion } from "./direccion.js";
+import { Telefono } from "./telefono.js";
 
-export { sequelize, User, MenuItem, Reservation };
+import { Order } from "./order.js";
+import { OrderItem } from "./orderItem.js";
+
+function linkOnce(model, assocName, fn) {
+  const already =
+    model.associations &&
+    Object.prototype.hasOwnProperty.call(model.associations, assocName);
+  if (!already) fn();
+}
+
+/* ====== Cliente ↔ Direccion ====== */
+linkOnce(Cliente, "direcciones", () => {
+  Cliente.hasMany(Direccion, { foreignKey: "id_cliente", as: "direcciones" });
+});
+linkOnce(Direccion, "cliente", () => {
+  Direccion.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+});
+
+/* ====== Cliente ↔ Telefono ====== */
+linkOnce(Cliente, "telefonos", () => {
+  Cliente.hasMany(Telefono, { foreignKey: "id_cliente", as: "telefonos" });
+});
+linkOnce(Telefono, "cliente", () => {
+  Telefono.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+});
+
+/* ====== Cliente ↔ Order ====== */
+linkOnce(Cliente, "orders", () => {
+  Cliente.hasMany(Order, { foreignKey: "id_cliente", as: "orders" });
+});
+linkOnce(Order, "cliente", () => {
+  Order.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+});
+
+/* ====== Order ↔ OrderItem ====== */
+linkOnce(Order, "items", () => {
+  Order.hasMany(OrderItem, { foreignKey: "id_order", as: "items" });
+});
+linkOnce(OrderItem, "order", () => {
+  OrderItem.belongsTo(Order, { foreignKey: "id_order", as: "order" });
+});
+
+/* ====== OrderItem ↔ MenuItem  (FALTABA) ====== */
+linkOnce(OrderItem, "menuItem", () => {
+  // usa tu FK id_menu_item en order_items
+  OrderItem.belongsTo(MenuItem, { foreignKey: "id_menu_item", as: "menuItem" });
+});
+linkOnce(MenuItem, "orderItems", () => {
+  MenuItem.hasMany(OrderItem, { foreignKey: "id_menu_item", as: "orderItems" });
+});
+
+export {
+  sequelize,
+  User,
+  MenuItem,
+  Reservation,
+  EmployeeRole,
+  Employee,
+  Cliente,
+  Direccion,
+  Telefono,
+  Order,
+  OrderItem,
+};

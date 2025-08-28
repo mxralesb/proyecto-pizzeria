@@ -1,5 +1,6 @@
 import Header from "./Header";
 import Footer from "./Footer";
+import HeaderBar from "../components/HeaderBar";
 
 export default function Layout({ children }) {
   return (
