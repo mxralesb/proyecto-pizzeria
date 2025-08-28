@@ -1,0 +1,50 @@
+.header {
+  position: sticky; top: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 200; 
+}
+.inner {
+  max-width: 1100px; width: 92%;
+  margin: 0 auto;
+  height: 64px;
+  display: flex; align-items: center; gap: 16px;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #0f172a; }
+.logo { font-size: 24px; }
+.brandText { font-weight: 700; font-size: 18px; }
+
+.nav { display: flex; gap: 14px; margin-left: 12px; }
+.link {
+  text-decoration: none; color: #334155;
+  font-weight: 500; padding: 8px 10px; border-radius: 10px;
+}
+.active { background: #fff7ed; color: #d64545; }
+
+.actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.cartbtn {
+  background: transparent; border: 1px solid #e5e7eb;
+  border-radius: 10px; padding: 8px 12px; cursor: pointer;
+  position: relative;
+}
+.badge {
+  position: absolute; top: -6px; right: -6px;
+  background: #111827; color: #fff; border-radius: 999px;
+  font-size: 12px; padding: 2px 6px;
+}
+
+.btnOutline {
+  border: 1px solid #d64545; color: #d64545;
+  background: #fff; border-radius: 10px; padding: 8px 12px;
+  text-decoration: none;
+}
+.btnOutline:hover { background: #fff7ed; }
+.btnPrimary {
+  background: #d64545; color: #fff; border: 0;
+  border-radius: 10px; padding: 8px 12px; text-decoration: none;
+}
+.user { color: #4b5563; font-size: 14px; }
+
+@media (max-width: 780px) {
+  .nav { display: none; }
+}

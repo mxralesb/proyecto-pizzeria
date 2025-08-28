@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 export default function Delivery() {
   const [deliveries, setDeliveries] = useState([]);
 
-  // Simulación de datos recibidos desde Orders.jsx
   useEffect(() => {
     const sampleDeliveries = [
       {

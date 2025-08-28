@@ -375,3 +375,16 @@ h2{ border-left:4px solid var(--pz-red); padding-left:10px; }
 .pz-table th,.pz-table td{padding:12px 14px;border-bottom:1px solid #f1f5f9;text-align:left}
 .pz-table thead th{background:#f8fafc;font-weight:700}
 .pz-table tbody tr:last-child td{border-bottom:0}
+
+.pz-actions { overflow: visible !important; }
+.pz-actions .pz-btn { display: inline-flex; align-items: center; }
+
+@keyframes pz-shake {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+.pz-btn-shake { animation: pz-shake .35s ease; }
+.pz-btn-ghost.is-disabled { opacity: .6; cursor: not-allowed; }

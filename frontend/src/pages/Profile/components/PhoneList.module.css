@@ -1,0 +1,7 @@
+.card { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.table { width:100%; border-collapse:collapse; }
+.table th, .table td { border:1px solid #eee; padding:8px; }
+.empty { text-align:center; padding:12px; }
+.actions button { margin-right:6px; }
+.danger { background:#e54848; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
