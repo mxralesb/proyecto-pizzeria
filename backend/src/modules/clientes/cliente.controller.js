@@ -16,7 +16,6 @@ async function getEmailFromReq(req) {
   }
   return null;
 }
-
 export const getMe = async (req, res) => {
   try {
     const email = await getEmailFromReq(req);
@@ -50,7 +49,7 @@ export const listDirecciones = async (req, res) => {
     });
     res.json(rows);
   } catch (e) {
-    console.error(e);
+    console.error("listDirecciones error:", e);
     res.status(500).json({ error: "Error al listar direcciones" });
   }
 };
@@ -72,7 +71,7 @@ export const createDireccion = async (req, res) => {
     });
     res.status(201).json(row);
   } catch (e) {
-    console.error(e);
+    console.error("createDireccion error:", e);
     res.status(500).json({ error: "Error al crear dirección" });
   }
 };
@@ -93,7 +92,7 @@ export const updateDireccion = async (req, res) => {
     await row.update({ tipo_direccion, calle, ciudad, estado, codigo_postal });
     res.json(row);
   } catch (e) {
-    console.error(e);
+    console.error("updateDireccion error:", e);
     res.status(500).json({ error: "Error al actualizar dirección" });
   }
 };
@@ -110,7 +109,7 @@ export const deleteDireccion = async (req, res) => {
     });
     res.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error("deleteDireccion error:", e);
     res.status(500).json({ error: "Error al eliminar dirección" });
   }
 };
@@ -127,7 +126,7 @@ export const listTelefonos = async (req, res) => {
     });
     res.json(rows);
   } catch (e) {
-    console.error(e);
+    console.error("listTelefonos error:", e);
     res.status(500).json({ error: "Error al listar teléfonos" });
   }
 };
@@ -138,7 +137,7 @@ export const createTelefono = async (req, res) => {
     const cliente = await Cliente.findOne({ where: { correo_electronico: email } });
     if (!cliente) return res.status(404).json({ error: "Perfil no encontrado" });
 
-    const { numero, tipo } = req.body; 
+    const { numero, tipo } = req.body;
     const row = await Telefono.create({
       id_cliente: cliente.id_cliente,
       numero,
@@ -146,7 +145,7 @@ export const createTelefono = async (req, res) => {
     });
     res.status(201).json(row);
   } catch (e) {
-    console.error(e);
+    console.error("createTelefono error:", e);
     res.status(500).json({ error: "Error al crear teléfono" });
   }
 };
@@ -167,7 +166,7 @@ export const updateTelefono = async (req, res) => {
     await row.update({ numero, tipo });
     res.json(row);
   } catch (e) {
-    console.error(e);
+    console.error("updateTelefono error:", e);
     res.status(500).json({ error: "Error al actualizar teléfono" });
   }
 };
@@ -184,7 +183,7 @@ export const deleteTelefono = async (req, res) => {
     });
     res.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error("deleteTelefono error:", e);
     res.status(500).json({ error: "Error al eliminar teléfono" });
   }
 };
@@ -192,7 +191,7 @@ export const deleteTelefono = async (req, res) => {
 export const registerClient = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const {
+    let {
       nombre,
       apellido,
       correo_electronico,
@@ -200,6 +199,11 @@ export const registerClient = async (req, res) => {
       direccion, 
       telefono, 
     } = req.body;
+
+    nombre = String(nombre ?? "").trim();
+    apellido = String(apellido ?? "").trim();
+    correo_electronico = String(correo_electronico ?? "").trim().toLowerCase();
+    contrasena = String(contrasena ?? "").trim();
 
     if (!nombre || !apellido || !correo_electronico || !contrasena) {
       return res.status(400).json({ error: "Faltan datos requeridos" });
@@ -217,8 +221,14 @@ export const registerClient = async (req, res) => {
       { nombre, apellido, correo_electronico, contrasena: hash },
       { transaction: t }
     );
+
     const user = await User.create(
-      { name: `${nombre} ${apellido}`, email: correo_electronico, password: hash, role: "cliente" },
+      {
+        name: `${nombre} ${apellido}`,
+        email: correo_electronico,
+        password: hash,
+        role: "cliente",
+      },
       { transaction: t }
     );
 

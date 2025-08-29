@@ -10,7 +10,7 @@ export default function Header() {
   ).toLowerCase();
 
   const handleLogout = () => {
-    logout();
+    logout();       
     navigate("/");
   };
 
