@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="pz-footer">
       <div className="pz-container pz-footer-grid">
         <div>
-          <h4 className="pz-footer-title">El kratos</h4>
+          <h4 className="pz-footer-title">Pizzarica</h4>
           <p>Auténtica pizza al horno de leña desde 1998.</p>
           <p className="pz-dim"> {new Date().getFullYear()} Todos los derechos reservados.</p>
         </div>
@@ -11,9 +11,7 @@ export default function Footer() {
         <div>
           <h5 className="pz-footer-sub">Horarios</h5>
           <ul className="pz-list">
-            <li>Lun–Jue: 11:00–22:00</li>
-            <li>Vie–Sáb: 11:00–23:30</li>
-            <li>Dom: 12:00–21:00</li>
+            <li>Lun–Dom: 8:00–22:00</li>
           </ul>
         </div>
 

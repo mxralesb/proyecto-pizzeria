@@ -30,8 +30,8 @@ export default function CheckoutPage() {
     name: user?.name || "",
     email: user?.email || "",
     phone: "",
-    address: "Calle Falsa 123",
-    city: "Guatemala",
+    address: "",
+    city: "",
     payment: "tarjeta",
     cardName: "",
     cardNumber: "",
@@ -44,8 +44,48 @@ export default function CheckoutPage() {
     if (!items.length) navigate("/");
   }, [items, navigate]);
 
-  const onChange = (e) =>
-    setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  // Limpia datos de tarjeta si cambian a efectivo (opcional pero útil)
+  useEffect(() => {
+    if (form.payment === "efectivo") {
+      setForm((f) => ({
+        ...f,
+        cardName: "",
+        cardNumber: "",
+        cardExp: "",
+        cardCvv: "",
+      }));
+    }
+  }, [form.payment]);
+
+  // 🪄 Formatear inputs especiales
+  const onChange = (e) => {
+    let { name, value } = e.target;
+
+    if (name === "cardNumber") {
+      value = value.replace(/\D/g, ""); // solo dígitos
+      value = value.slice(0, 16); // máximo 16 dígitos
+      value = value.replace(/(.{4})/g, "$1 ").trim(); // espacio cada 4
+    }
+
+    if (name === "cardName") {
+      value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
+      value = value.toUpperCase();
+    }
+
+    if (name === "cardExp") {
+      value = value.replace(/\D/g, ""); // solo dígitos
+      value = value.slice(0, 4); // máximo 4 números
+      if (value.length >= 3) {
+        value = value.slice(0, 2) + "/" + value.slice(2); // MM/AA
+      }
+    }
+
+    if (name === "cardCvv") {
+      value = value.replace(/\D/g, "").slice(0, 4); // solo dígitos, máx 4
+    }
+
+    setForm((f) => ({ ...f, [name]: value }));
+  };
 
   const clearCartEverywhere = () => {
     cart?.clear?.();
@@ -129,10 +169,67 @@ export default function CheckoutPage() {
   const submit = async (e) => {
     e.preventDefault();
     if (!items.length) return;
+
+    // 🔒 Validaciones extra si es tarjeta
+    if (form.payment === "tarjeta") {
+      const cardNameRegex = /^[A-ZÀ-Ÿ\s]{2,}$/;
+      const cardNumberRegex = /^\d{16}$/;           // 16 dígitos exactos
+      const cardExpRegex = /^(0[1-9]|1[0-2])\/\d{2}$/; // MM/AA
+      const cardCvvRegex = /^\d{3,4}$/;             // 3 o 4 dígitos
+
+            // Nombre de la tarjeta
+      if (!cardNameRegex.test(form.cardName)) {
+        alert("El nombre de la tarjeta solo puede contener letras y espacios.");
+        return;
+      }
+
+      // Número
+      if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, ""))) {
+        alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
+        return;
+      }
+
+      // Expiración (formato + mes y año actuales)
+      if (!cardExpRegex.test(form.cardExp)) {
+        alert("Fecha de expiración inválida. Usa formato MM/AA.");
+        return;
+      } else {
+        const [mm, yy] = form.cardExp.split("/").map((v) => parseInt(v, 10));
+        const currentYear = new Date().getFullYear() % 100; // ej. 2025 -> 25
+        const currentMonth = new Date().getMonth() + 1;     // 1-12
+
+        if (mm < 1 || mm > 12) {
+          alert("El mes de expiración debe estar entre 01 y 12.");
+          return;
+        }
+        if (yy < currentYear) {
+          alert("La tarjeta ya expiró (año inválido).");
+          return;
+        }
+        if (yy === currentYear && mm < currentMonth) {
+          alert("La tarjeta ya expiró (mes inválido).");
+          return;
+        }
+      }
+
+      // CVV
+      if (!cardCvvRegex.test(form.cardCvv)) {
+        alert("CVV inválido. Debe tener 3 o 4 dígitos.");
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const payload = {
-        metodo_pago: form.payment, 
+        cliente: {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          address: form.address,
+          city: form.city,
+        },
+        metodo_pago: form.payment,
         subtotal,
         tax,
         total,
@@ -204,6 +301,7 @@ export default function CheckoutPage() {
                 name="phone"
                 value={form.phone}
                 onChange={onChange}
+                inputMode="tel"
               />
             </label>
             <label>
@@ -252,7 +350,7 @@ export default function CheckoutPage() {
             {form.payment === "tarjeta" && (
               <div className="pz-card" style={{ padding: 14 }}>
                 <h4 style={{ margin: 0, marginBottom: 10 }}>
-                  Datos de tarjeta (simulado)
+                  Datos de tarjeta
                 </h4>
                 <label>
                   Nombre en la tarjeta
@@ -262,6 +360,7 @@ export default function CheckoutPage() {
                     value={form.cardName}
                     onChange={onChange}
                     required={form.payment === "tarjeta"}
+                    autoComplete="cc-name"
                   />
                 </label>
                 <label>
@@ -274,6 +373,7 @@ export default function CheckoutPage() {
                     onChange={onChange}
                     placeholder="4111 1111 1111 1111"
                     required={form.payment === "tarjeta"}
+                    autoComplete="cc-number"
                   />
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -282,10 +382,11 @@ export default function CheckoutPage() {
                     <input
                       className="pz-input"
                       name="cardExp"
-                      placeholder="12/28"
+                      placeholder="MM/AA"
                       value={form.cardExp}
                       onChange={onChange}
                       required={form.payment === "tarjeta"}
+                      autoComplete="cc-exp"
                     />
                   </label>
                   <label>
@@ -297,6 +398,7 @@ export default function CheckoutPage() {
                       value={form.cardCvv}
                       onChange={onChange}
                       required={form.payment === "tarjeta"}
+                      autoComplete="cc-csc"
                     />
                   </label>
                 </div>

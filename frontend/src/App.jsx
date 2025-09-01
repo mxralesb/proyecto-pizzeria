@@ -24,7 +24,7 @@ import ProfilePage from "./pages/Profile";
 import RegisterClient from "./pages/Auth/RegisterClient";
 import CheckoutPage from "./pages/Checkout";
 import History from "./pages/History"; // <- asegúrate de tener src/pages/History/index.jsx con export default
-
+import Inventory from "./pages/Inventory.jsx";
 // Guards
 import RequireAdmin from "./components/RequireAdmin";
 import RequireClient from "./components/RequireClient";
@@ -101,6 +101,14 @@ export default function App() {
                   element={
                     <RequireAdmin>
                       <Delivery />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/inventory"   // ✅ nueva ruta protegida
+                  element={
+                    <RequireAdmin>
+                      <Inventory />
                     </RequireAdmin>
                   }
                 />

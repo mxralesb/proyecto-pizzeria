@@ -34,6 +34,7 @@ export default function HeaderBar() {
               <Link to="/admin/employees/new" className={`${styles.link} ${pathname === "/admin/employees/new" ? styles.active : ""}`}>➕ Agregar</Link>
               <Link to="/orders" className={`${styles.link} ${pathname === "/orders" ? styles.active : ""}`}>Órdenes</Link>
               <Link to="/delivery" className={`${styles.link} ${pathname === "/delivery" ? styles.active : ""}`}>Delivery</Link>
+              <Link to="/inventory" className={`${styles.link} ${pathname === "/inventory" ? styles.active : ""}`}>Inventario</Link>
             </>
           )}
         </nav>

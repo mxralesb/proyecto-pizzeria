@@ -44,6 +44,7 @@ export default function Navbar() {
               </Link>
               <Link to="/orders" className={`pz-link ${pathname === "/orders" ? "active" : ""}`}>Órdenes</Link>
               <Link to="/delivery" className={`pz-link ${pathname === "/delivery" ? "active" : ""}`}>Delivery</Link>
+              <Link to="/inventory" style={{ display: "block", marginBottom: "10px", fontWeight: pathname === "/inventory" ? "bold" : "normal" }}>Inventario</Link>
             </>
           )}
         </nav>

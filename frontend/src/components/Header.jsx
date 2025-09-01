@@ -51,6 +51,9 @@ export default function Header() {
               <NavLink to="/delivery" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
                 Delivery
               </NavLink>
+              <NavLink to="/inventory" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+                Inventario
+              </NavLink>
             </>
           )}
         </nav>
