@@ -27,6 +27,5 @@ export const ClienteProfile = sequelize.define("ClienteProfile", {
   timestamps: false
 });
 
-// Relación 1 a 1
 User.hasOne(ClienteProfile, { foreignKey: "user_id" });
 ClienteProfile.belongsTo(User, { foreignKey: "user_id" });

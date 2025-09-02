@@ -1,12 +1,17 @@
-import dotenv from "dotenv";
-dotenv.config();
+// backend/src/server.js
+import "dotenv/config";
 import app from "./app.js";
 import { sequelize } from "./models/index.js";
 
-
 const port = Number(process.env.PORT || 4000);
 
-(async ()=>{
-  await sequelize.authenticate();
-  app.listen(port, ()=> console.log(`API on http://localhost:${port}`));
+(async () => {
+  try {
+    await sequelize.authenticate();
+    await sequelize.sync({ alter: true });
+    app.listen(port, () => console.log(`API on http://localhost:${port}`));
+  } catch (e) {
+    console.error("DB start error:", e);
+    process.exit(1);
+  }
 })();

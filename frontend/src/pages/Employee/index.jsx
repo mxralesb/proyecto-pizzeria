@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api/client";
 import styles from "./Employee.module.css";
-
 import Filters from "./components/Filters";
 import Table from "./components/Table";
 import ModalForm from "./components/ModalForm";
@@ -10,12 +9,11 @@ export default function EmployeePage() {
   const [employees, setEmployees] = useState([]);
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
   const [showForm, setShowForm] = useState(false);
+
   const [form, setForm] = useState({
     cui: "",
     primer_nombre: "",
@@ -30,6 +28,8 @@ export default function EmployeePage() {
     salario: "",
     activo: true,
     rol_id: "",
+    email: "",
+    password: "",
   });
 
   const loadEmployees = async () => {
@@ -54,7 +54,6 @@ export default function EmployeePage() {
       setRoles(data);
       await loadEmployees();
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filtered = useMemo(() => {
@@ -65,12 +64,7 @@ export default function EmployeePage() {
         e.primer_nombre?.toLowerCase().includes(q) ||
         e.primer_apellido?.toLowerCase().includes(q);
       const roleOk = roleFilter ? e.rol_id === Number(roleFilter) : true;
-      const statusOk =
-        statusFilter === ""
-          ? true
-          : statusFilter === "true"
-          ? e.activo
-          : !e.activo;
+      const statusOk = statusFilter === "" ? true : statusFilter === "true" ? e.activo : !e.activo;
       return matches && roleOk && statusOk;
     });
   }, [employees, search, roleFilter, statusFilter]);

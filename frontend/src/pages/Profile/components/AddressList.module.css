@@ -1,7 +1,41 @@
-.card { background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
-.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.table { width:100%; border-collapse:collapse; }
-.table th, .table td { border:1px solid #eee; padding:8px; }
-.empty { text-align:center; padding:12px; }
-.actions button { margin-right:6px; }
-.danger { background:#e54848; color:#fff; border:none; padding:6px 10px; border-radius:8px; cursor:pointer; }
+.card {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px;
+}
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.list {
+  display: grid;
+  gap: 10px;
+}
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px dashed #eee;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.badge {
+  display: inline-block;
+  background: #f7f7f7;
+  border: 1px solid #eee;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 2px 8px;
+  margin-bottom: 4px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.empty {
+  color: #777;
+  padding: 8px 0;
+}

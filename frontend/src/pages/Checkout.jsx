@@ -5,6 +5,9 @@ import { jsPDF } from "jspdf";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/authContext";
 import { createOrder } from "../api/orders";
+import { getMe, listDirecciones, listTelefonos } from "../api/clientes";
+
+const NEW_VALUE = "__new__";
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -16,11 +19,7 @@ export default function CheckoutPage() {
     : JSON.parse(localStorage.getItem("pz-cart") || "[]");
 
   const subtotal = useMemo(
-    () =>
-      items.reduce(
-        (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
-        0
-      ),
+    () => items.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0),
     [items]
   );
   const tax = +(subtotal * 0.12).toFixed(2);
@@ -38,6 +37,11 @@ export default function CheckoutPage() {
     cardExp: "",
     cardCvv: "",
   });
+
+  const [phones, setPhones] = useState([]);
+  const [dirs, setDirs] = useState([]);
+  const [selPhone, setSelPhone] = useState(NEW_VALUE);
+  const [selDir, setSelDir] = useState(NEW_VALUE);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -45,20 +49,51 @@ export default function CheckoutPage() {
   }, [items, navigate]);
 
   useEffect(() => {
+    const load = async () => {
+      try {
+        const [meRes, telRes, dirRes] = await Promise.all([getMe(), listTelefonos(), listDirecciones()]);
+        const telList = Array.isArray(telRes?.data) ? telRes.data : [];
+        const dirList = Array.isArray(dirRes?.data) ? dirRes.data : [];
+
+        setPhones(telList);
+        setDirs(dirList);
+
+        if (telList.length > 0) {
+          setSelPhone(String(telList[0].id_telefono));
+          setForm((f) => ({ ...f, phone: telList[0].numero || "" }));
+        } else {
+          setSelPhone(NEW_VALUE);
+        }
+
+        if (dirList.length > 0) {
+          const d = dirList[0];
+          setSelDir(String(d.id_direccion));
+          setForm((f) => ({ ...f, address: d.calle || "", city: d.ciudad || "" }));
+        } else {
+          setSelDir(NEW_VALUE);
+        }
+
+        if (meRes?.data?.nombre || meRes?.data?.apellido) {
+          const nm = `${meRes.data.nombre || ""} ${meRes.data.apellido || ""}`.trim();
+          setForm((f) => ({ ...f, name: nm || f.name }));
+        }
+        if (meRes?.data?.correo_electronico) {
+          setForm((f) => ({ ...f, email: meRes.data.correo_electronico }));
+        }
+      } catch {
+      }
+    };
+    load();
+  }, []);
+
+  useEffect(() => {
     if (form.payment === "efectivo") {
-      setForm((f) => ({
-        ...f,
-        cardName: "",
-        cardNumber: "",
-        cardExp: "",
-        cardCvv: "",
-      }));
+      setForm((f) => ({ ...f, cardName: "", cardNumber: "", cardExp: "", cardCvv: "" }));
     }
   }, [form.payment]);
 
   const onChange = (e) => {
     let { name, value } = e.target;
-
     if (name === "cardNumber") value = value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
     if (name === "cardName") value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").toUpperCase();
     if (name === "cardExp") {
@@ -66,7 +101,7 @@ export default function CheckoutPage() {
       if (value.length >= 3) value = value.slice(0, 2) + "/" + value.slice(2);
     }
     if (name === "cardCvv") value = value.replace(/\D/g, "").slice(0, 4);
-
+    if (name === "phone") value = value.replace(/\D/g, "").slice(0, 8);
     setForm((f) => ({ ...f, [name]: value }));
   };
 
@@ -151,45 +186,20 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!items.length) return;
 
-    // Validaciones de tarjeta si aplica
     if (form.payment === "tarjeta") {
       const cardNameRegex = /^[A-ZÀ-Ÿ\s]{2,}$/;
       const cardNumberRegex = /^\d{16}$/;
       const cardExpRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
       const cardCvvRegex = /^\d{3,4}$/;
 
-      if (!cardNameRegex.test(form.cardName)) {
-        alert("El nombre de la tarjeta solo puede contener letras y espacios.");
-        return;
-      }
-      if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, ""))) {
-        alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
-        return;
-      }
-      if (!cardExpRegex.test(form.cardExp)) {
-        alert("Fecha de expiración inválida. Usa formato MM/AA.");
-        return;
-      } else {
-        const [mm, yy] = form.cardExp.split("/").map((v) => parseInt(v, 10));
-        const currentYear = new Date().getFullYear() % 100;
-        const currentMonth = new Date().getMonth() + 1;
-        if (mm < 1 || mm > 12 || yy < currentYear || (yy === currentYear && mm < currentMonth)) {
-          alert("La tarjeta ya expiró.");
-          return;
-        }
-      }
-      if (!cardCvvRegex.test(form.cardCvv)) {
-        alert("CVV inválido. Debe tener 3 o 4 dígitos.");
-        return;
-      }
-    }
-
-    // Validar máximo 20 unidades por producto
-    for (const it of items) {
-      if (it.qty > 20) {
-        alert(`No puedes pedir más de 20 unidades de ${it.name}.`);
-        return;
-      }
+      if (!cardNameRegex.test(form.cardName)) return alert("El nombre de la tarjeta solo puede contener letras y espacios.");
+      if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, ""))) return alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
+      if (!cardExpRegex.test(form.cardExp)) return alert("Fecha de expiración inválida. Usa formato MM/AA.");
+      const [mm, yy] = form.cardExp.split("/").map((v) => parseInt(v, 10));
+      const currentYear = new Date().getFullYear() % 100;
+      const currentMonth = new Date().getMonth() + 1;
+      if (mm < 1 || mm > 12 || yy < currentYear || (yy === currentYear && mm < currentMonth)) return alert("La tarjeta ya expiró.");
+      if (!cardCvvRegex.test(form.cardCvv)) return alert("CVV inválido. Debe tener 3 o 4 dígitos.");
     }
 
     setLoading(true);
@@ -216,12 +226,10 @@ export default function CheckoutPage() {
       };
 
       const { data: order } = await createOrder(payload);
-
       generateInvoicePDF(order);
       clearCartEverywhere();
       navigate("/historial", { replace: true });
-    } catch (err) {
-      console.error(err);
+    } catch {
       alert("No se pudo procesar el pago/orden.");
     } finally {
       setLoading(false);
@@ -229,6 +237,29 @@ export default function CheckoutPage() {
   };
 
   const disabled = !items.length || loading;
+
+  const onSelectPhone = (e) => {
+    const v = e.target.value;
+    setSelPhone(v);
+    if (v === NEW_VALUE) setForm((f) => ({ ...f, phone: "" }));
+    else {
+      const found = phones.find((p) => String(p.id_telefono) === v);
+      setForm((f) => ({ ...f, phone: found?.numero || "" }));
+    }
+  };
+
+  const onSelectDir = (e) => {
+    const v = e.target.value;
+    setSelDir(v);
+    if (v === NEW_VALUE) setForm((f) => ({ ...f, address: "", city: "" }));
+    else {
+      const d = dirs.find((x) => String(x.id_direccion) === v);
+      setForm((f) => ({ ...f, address: d?.calle || "", city: d?.ciudad || "" }));
+    }
+  };
+
+  const phoneDisabled = selPhone !== NEW_VALUE;
+  const dirDisabled = selDir !== NEW_VALUE;
 
   return (
     <main className="pz-container" style={{ paddingTop: 24, paddingBottom: 24 }}>
@@ -240,25 +271,76 @@ export default function CheckoutPage() {
         <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18, alignItems: "start" }}>
           <form className="pz-form" onSubmit={submit}>
             <h3>Datos del cliente</h3>
+
             <label>
               Nombre completo
               <input className="pz-input" name="name" value={form.name} onChange={onChange} required />
             </label>
+
             <label>
               Correo
               <input className="pz-input" type="email" name="email" value={form.email} onChange={onChange} required />
             </label>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <label>
+                Elegir teléfono
+                <select className="pz-input" value={selPhone} onChange={onSelectPhone}>
+                  {phones.map((p) => (
+                    <option key={p.id_telefono} value={String(p.id_telefono)}>
+                      {p.tipo} • {p.numero}
+                    </option>
+                  ))}
+                  <option value={NEW_VALUE}>Agregar nuevo…</option>
+                </select>
+              </label>
+              <label>
+                Elegir dirección
+                <select className="pz-input" value={selDir} onChange={onSelectDir}>
+                  {dirs.map((d) => (
+                    <option key={d.id_direccion} value={String(d.id_direccion)}>
+                      {d.tipo_direccion} • {d.calle}, {d.ciudad}
+                    </option>
+                  ))}
+                  <option value={NEW_VALUE}>Agregar nueva…</option>
+                </select>
+              </label>
+            </div>
+
             <label>
               Teléfono
-              <input className="pz-input" name="phone" value={form.phone} onChange={onChange} inputMode="tel" />
+              <input
+                className="pz-input"
+                name="phone"
+                value={form.phone}
+                onChange={onChange}
+                inputMode="tel"
+                maxLength={8}
+                disabled={phoneDisabled}
+                placeholder="8 dígitos"
+              />
             </label>
+
             <label>
               Dirección
-              <input className="pz-input" name="address" value={form.address} onChange={onChange} />
+              <input
+                className="pz-input"
+                name="address"
+                value={form.address}
+                onChange={onChange}
+                disabled={dirDisabled}
+              />
             </label>
+
             <label>
               Ciudad
-              <input className="pz-input" name="city" value={form.city} onChange={onChange} />
+              <input
+                className="pz-input"
+                name="city"
+                value={form.city}
+                onChange={onChange}
+                disabled={dirDisabled}
+              />
             </label>
 
             <h3>Método de pago</h3>

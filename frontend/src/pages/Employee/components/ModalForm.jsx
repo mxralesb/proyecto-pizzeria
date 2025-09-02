@@ -1,257 +1,317 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/client";
-import Field from "./Field";
 import styles from "./ModalForm.module.css";
 
 export default function ModalForm({ roles, form, setForm, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
 
+  const [createAccount, setCreateAccount] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [userPassword, setUserPassword] = useState("");
+  const [userRole, setUserRole] = useState("empleado");
+
+  const [errors, setErrors] = useState({});
+
+  const onlyLetters = (v) =>
+    v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/g, "").replace(/\s{2,}/g, " ");
+
+  const onlyPhone = (v) => v.replace(/\D/g, "").slice(0, 8);
+
   useEffect(() => {
-    const esc = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", esc);
-    return () => window.removeEventListener("keydown", esc);
-  }, [onClose]);
+    setErrors({});
+  }, [
+    form.cui,
+    form.primer_nombre,
+    form.segundo_nombre,
+    form.otros_nombres,
+    form.primer_apellido,
+    form.segundo_apellido,
+    form.apellido_casado,
+    form.telefono,
+    form.telefono_emergencia,
+    form.fecha_contratacion,
+    form.salario,
+    form.rol_id,
+    form.activo,
+    createAccount,
+    userEmail,
+    userPassword,
+    userRole,
+  ]);
 
-  // ✅ Función de sanitización inline
-  const sanitizeInput = (value, type, maxLength, allowSpaces = false) => {
-    let clean = value;
-
-    switch (type) {
-      case "number":
-        clean = clean.replace(/\D/g, ""); // solo números
-        break;
-
-      case "letters":
-        if (allowSpaces) {
-          // permite letras y espacios (para otros_nombres)
-          clean = clean.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ\s]/g, "");
-          clean = clean.replace(/\s{2,}/g, " "); // quita espacios dobles
-        } else {
-          // permite solo letras (sin espacios)
-          clean = clean.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñ]/g, "");
-        }
-        break;
-
-      case "salary":
-        // permitir solo números y punto decimal
-        clean = clean.replace(/[^0-9.]/g, "");
-        // asegurar máximo un punto decimal
-        const parts = clean.split(".");
-        if (parts.length > 2) clean = parts[0] + "." + parts[1];
-        break;
-
-      case "phone":
-        // permitir solo números
-        clean = clean.replace(/\D/g, "");
-        clean = clean.slice(0, 8);
-        // formatear en bloques de 4 dígitos
-        if (clean.length > 4) {
-          clean = clean.replace(/(\d{4})(\d{0,4})/, "$1 $2");
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    if (maxLength && type !== "phone") {
-      clean = clean.slice(0, maxLength);
-    }
-
-    clean = clean.trim();
-
-    // Capitalización automática para letras
-    if (type === "letters") {
-      clean = clean
-        .toLowerCase()
-        .replace(/\b\w/g, (c) => c.toUpperCase());
-    }
-
-    return clean;
-  };
-
-  // ✅ Validaciones finales antes de enviar
-  const errors = useMemo(() => {
+  const val = useMemo(() => {
     const e = {};
-    const today = new Date().toISOString().slice(0, 10);
+    if (!form.primer_nombre?.trim()) e.primer_nombre = "Requerido";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.primer_nombre || "")) e.primer_nombre = "Solo letras";
+    if (!form.primer_apellido?.trim()) e.primer_apellido = "Requerido";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.primer_apellido || "")) e.primer_apellido = "Solo letras";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.segundo_nombre || "")) e.segundo_nombre = "Solo letras";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.otros_nombres || "")) e.otros_nombres = "Solo letras";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.segundo_apellido || "")) e.segundo_apellido = "Solo letras";
+    if (/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]/.test(form.apellido_casado || "")) e.apellido_casado = "Solo letras";
 
-    if (!/^\d{13}$/.test(form.cui)) e.cui = "El CUI debe tener 13 dígitos";
-    if (!form.primer_nombre.trim()) e.primer_nombre = "Primer nombre requerido";
-    if (!form.primer_apellido.trim()) e.primer_apellido = "Primer apellido requerido";
-    if (!/^\d{4}\s\d{4}$/.test(form.telefono)) e.telefono = "Número de teléfono inválido";
+    if (!form.telefono?.trim()) e.telefono = "Requerido";
+    if (form.telefono && form.telefono.length !== 8) e.telefono = "8 dígitos";
+    if (form.telefono_emergencia && form.telefono_emergencia.length !== 8)
+      e.telefono_emergencia = "8 dígitos";
 
-    if (!form.fecha_contratacion) {
-      e.fecha_contratacion = "Fecha contratación requerida";
-    } else if (form.fecha_contratacion > today) {
-      e.fecha_contratacion = "La fecha de contratación no puede ser mayor a hoy";
-    }
-
-    if (!form.salario || Number(form.salario) < 3723)
-      e.salario = "El salario no puede ser menor a Q3723.00";
-
+    if (!form.salario || Number(form.salario) < 3723) e.salario = ">= Q3723.00";
     if (!form.rol_id) e.rol_id = "Selecciona un rol";
-
+    if (createAccount) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) e.userEmail = "Correo inválido";
+      if (!userPassword || userPassword.length < 6) e.userPassword = "Mínimo 6 caracteres";
+      if (!userRole) e.userRole = "Selecciona";
+    }
     return e;
-  }, [form]);
+  }, [form, createAccount, userEmail, userPassword, userRole]);
 
   const submit = async (e) => {
     e.preventDefault();
-    if (Object.keys(errors).length) return;
-
-    const payload = {
-      ...form,
-      salario: Number(form.salario),
-      rol_id: Number(form.rol_id),
-      telefono: form.telefono.replace(/\s/g, ""), // quitar espacio antes de enviar
-      telefono_emergencia: form.telefono_emergencia.replace(/\s/g, ""),
-    };
-
+    if (Object.keys(val).length) {
+      setErrors(val);
+      return;
+    }
+    setSaving(true);
     try {
-      setSaving(true);
+      const payload = {
+        cui: form.cui || null,
+        primer_nombre: form.primer_nombre,
+        segundo_nombre: form.segundo_nombre || null,
+        otros_nombres: form.otros_nombres || null,
+        primer_apellido: form.primer_apellido,
+        segundo_apellido: form.segundo_apellido || null,
+        apellido_casado: form.apellido_casado || null,
+        telefono: form.telefono,
+        telefono_emergencia: form.telefono_emergencia || null,
+        fecha_contratacion: form.fecha_contratacion,
+        salario: Number(form.salario),
+        activo: !!form.activo,
+        rol_id: Number(form.rol_id),
+      };
+
+      if (createAccount) {
+        payload.userEmail = userEmail.trim().toLowerCase();
+        payload.userPassword = userPassword;
+        payload.userRole = userRole;
+      }
+
       await api.post("/employees", payload);
       await onSaved();
     } catch (err) {
-      const msg = err.response?.data?.error || err.message || "Error al crear empleado";
-      alert(msg);
-      console.error(err.response?.data || err);
+      alert("No se pudo guardar");
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div className={styles.modal} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <form className={styles.card} onSubmit={submit}>
-        <div className={styles.header}><h3>Nuevo empleado</h3></div>
+    <div className={styles.wrap}>
+      <div className={styles.card}>
+        <h3>Nuevo empleado</h3>
 
-        <div className={styles.grid}>
-          {/* CUI */}
-          <Field label="CUI*" error={errors.cui}>
+        <form onSubmit={submit} className={styles.grid}>
+          <label>
+            CUI
             <input
               value={form.cui}
-              onChange={(e) => setForm({ ...form, cui: sanitizeInput(e.target.value, "number", 13) })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, cui: e.target.value.replace(/\D/g, "").slice(0, 13) }))
+              }
+              inputMode="numeric"
             />
-          </Field>
+          </label>
 
-          {/* Primer nombre */}
-          <Field label="Primer nombre*" error={errors.primer_nombre}>
+          <label>
+            Primer nombre*
             <input
               value={form.primer_nombre}
-              onChange={(e) => setForm({ ...form, primer_nombre: sanitizeInput(e.target.value, "letters") })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, primer_nombre: onlyLetters(e.target.value) }))
+              }
+              className={errors.primer_nombre ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Segundo nombre */}
-          <Field label="Segundo nombre">
+          <label>
+            Segundo nombre
             <input
               value={form.segundo_nombre}
-              onChange={(e) => setForm({ ...form, segundo_nombre: sanitizeInput(e.target.value, "letters") })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, segundo_nombre: onlyLetters(e.target.value) }))
+              }
+              className={errors.segundo_nombre ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Otros nombres (✅ permite espacios) */}
-          <Field label="Otros nombres">
+          <label>
+            Otros nombres
             <input
               value={form.otros_nombres}
-              onChange={(e) => setForm({ ...form, otros_nombres: sanitizeInput(e.target.value, "letters", null, true) })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, otros_nombres: onlyLetters(e.target.value) }))
+              }
+              className={errors.otros_nombres ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Primer apellido */}
-          <Field label="Primer apellido*" error={errors.primer_apellido}>
+          <label>
+            Primer apellido*
             <input
               value={form.primer_apellido}
-              onChange={(e) => setForm({ ...form, primer_apellido: sanitizeInput(e.target.value, "letters") })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, primer_apellido: onlyLetters(e.target.value) }))
+              }
+              className={errors.primer_apellido ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Segundo apellido */}
-          <Field label="Segundo apellido">
+          <label>
+            Segundo apellido
             <input
               value={form.segundo_apellido}
-              onChange={(e) => setForm({ ...form, segundo_apellido: sanitizeInput(e.target.value, "letters") })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, segundo_apellido: onlyLetters(e.target.value) }))
+              }
+              className={errors.segundo_apellido ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Apellido casado */}
-          <Field label="Apellido casado">
+          <label>
+            Apellido casado
             <input
               value={form.apellido_casado}
-              onChange={(e) => setForm({ ...form, apellido_casado: sanitizeInput(e.target.value, "letters") })}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, apellido_casado: onlyLetters(e.target.value) }))
+              }
+              className={errors.apellido_casado ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Teléfono */}
-          <Field label="Teléfono*" error={errors.telefono}>
+          <label>
+            Teléfono*
             <input
               value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: sanitizeInput(e.target.value, "phone") })}
+              onChange={(e) => setForm((f) => ({ ...f, telefono: onlyPhone(e.target.value) }))}
+              className={errors.telefono ? styles.err : ""}
+              inputMode="numeric"
+              maxLength={8}
             />
-          </Field>
+          </label>
 
-          {/* Tel. emergencia */}
-          <Field label="Tel. emergencia">
+          <label>
+            Tel. emergencia
             <input
-              value={form.telefono_emergencia}
-              onChange={(e) => setForm({ ...form, telefono_emergencia: sanitizeInput(e.target.value, "phone") })}
+              value={form.telefono_emergencia || ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, telefono_emergencia: onlyPhone(e.target.value) }))
+              }
+              className={errors.telefono_emergencia ? styles.err : ""}
+              inputMode="numeric"
+              maxLength={8}
             />
-          </Field>
+          </label>
 
-          {/* Fecha contratación */}
-          <Field label="Fecha contratación*" error={errors.fecha_contratacion}>
+          <label>
+            Fecha contratación*
             <input
               type="date"
-              max={new Date().toISOString().slice(0, 10)} // ✅ bloquea fechas futuras
               value={form.fecha_contratacion}
-              onChange={(e) => setForm({ ...form, fecha_contratacion: e.target.value })}
+              onChange={(e) => setForm((f) => ({ ...f, fecha_contratacion: e.target.value }))}
             />
-          </Field>
+          </label>
 
-          {/* Salario */}
-          <Field label="Salario (Q)*" error={errors.salario}>
+          <label>
+            Salario (Q)*
             <input
               type="number"
               step="0.01"
               value={form.salario}
-              onChange={(e) => setForm({ ...form, salario: sanitizeInput(e.target.value, "salary") })}
+              onChange={(e) => setForm((f) => ({ ...f, salario: e.target.value }))}
+              className={errors.salario ? styles.err : ""}
             />
-          </Field>
+          </label>
 
-          {/* Rol */}
-          <Field label="Rol*" error={errors.rol_id}>
+          <label>
+            Rol*
             <select
               value={form.rol_id}
-              onChange={(e) => setForm({ ...form, rol_id: e.target.value })}
+              onChange={(e) => setForm((f) => ({ ...f, rol_id: e.target.value }))}
+              className={errors.rol_id ? styles.err : ""}
             >
               <option value="">Selecciona…</option>
               {roles.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
               ))}
             </select>
-          </Field>
+          </label>
 
-          {/* Activo */}
-          <div className={styles.check}>
-            <input
-              id="activo"
-              type="checkbox"
-              checked={form.activo}
-              onChange={(e) => setForm({ ...form, activo: e.target.checked })}
-            />
-            <label htmlFor="activo">Activo</label>
+          <div className={styles.row}>
+            <label className={styles.chk}>
+              <input
+                type="checkbox"
+                checked={form.activo}
+                onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
+              />
+              Activo
+            </label>
+
+            <label className={styles.chk}>
+              <input
+                type="checkbox"
+                checked={createAccount}
+                onChange={(e) => setCreateAccount(e.target.checked)}
+              />
+              Crear cuenta de acceso
+            </label>
           </div>
-        </div>
 
-        <div className={styles.actions}>
-          <button type="button" className={styles.btn} onClick={onClose}>Cancelar</button>
-          <button
-            className={`${styles.btn} ${styles.primary}`}
-            disabled={saving || Object.keys(errors).length > 0}
-          >
-            {saving ? "Guardando…" : "Guardar"}
-          </button>
-        </div>
-      </form>
+          {createAccount && (
+            <div className={styles.account}>
+              <label>
+                Correo*
+                <input
+                  value={userEmail}
+                  onChange={(e) => setUserEmail(e.target.value)}
+                  className={errors.userEmail ? styles.err : ""}
+                />
+              </label>
+
+              <label>
+                Contraseña*
+                <input
+                  type="password"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className={errors.userPassword ? styles.err : ""}
+                />
+              </label>
+
+              <label>
+                Rol de acceso*
+                <select
+                  value={userRole}
+                  onChange={(e) => setUserRole(e.target.value)}
+                  className={errors.userRole ? styles.err : ""}
+                >
+                  <option value="empleado">empleado</option>
+                  <option value="admin">admin</option>
+                </select>
+              </label>
+            </div>
+          )}
+
+          <div className={styles.actions}>
+            <button type="button" className={styles.ghost} onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button className={styles.primary} disabled={saving}>
+              {saving ? "Guardando…" : "Guardar"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

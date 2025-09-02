@@ -1,4 +1,3 @@
-// src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import AuthProvider from "./context/authContext";
@@ -10,7 +9,6 @@ import CartFab from "./components/CartFab";
 import Toast from "./components/Toast";
 import ErrorBoundary from "./components/ErrorBoundary";
 
-// Pages
 import Menu from "./pages/Menu";
 import Login from "./pages/Login";
 import Recover from "./pages/Recover";
@@ -23,11 +21,17 @@ import AddEmployee from "./pages/AddEmployee.jsx";
 import ProfilePage from "./pages/Profile";
 import RegisterClient from "./pages/Auth/RegisterClient";
 import CheckoutPage from "./pages/Checkout";
-import History from "./pages/History"; // <- asegúrate de tener src/pages/History/index.jsx con export default
+import History from "./pages/History";
 import Inventory from "./pages/Inventory.jsx";
-// Guards
+import GoogleAuth from "./pages/OAuth/GoogleAuth";
+import MesasDashboard from "./pages/Mesas";
+
+import POSPage from "./pages/POS";
+import OrdersOpsBoard from "./pages/Ops/Orders";
+
 import RequireAdmin from "./components/RequireAdmin";
 import RequireClient from "./components/RequireClient";
+import RequireRole from "./components/RequireRole";
 
 export default function App() {
   return (
@@ -37,15 +41,14 @@ export default function App() {
           <Layout>
             <ErrorBoundary>
               <Routes>
-                {/* Públicas */}
                 <Route path="/" element={<Menu />} />
                 <Route path="/reservar" element={<Reserve />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/recuperar" element={<Recover />} />
                 <Route path="/registro" element={<RegisterClient />} />
+                <Route path="/oauth/google" element={<GoogleAuth />} />
                 <Route path="/checkout" element={<CheckoutPage />} />
 
-                {/* Cliente */}
                 <Route
                   path="/perfil"
                   element={
@@ -70,7 +73,7 @@ export default function App() {
                     </RequireClient>
                   }
                 />
-                {/* Admin */}
+
                 <Route
                   path="/empleados"
                   element={
@@ -104,7 +107,7 @@ export default function App() {
                   }
                 />
                 <Route
-                  path="/inventory"   // ✅ nueva ruta protegida
+                  path="/inventory"
                   element={
                     <RequireAdmin>
                       <Inventory />
@@ -112,12 +115,45 @@ export default function App() {
                   }
                 />
 
-                {/* Fallback */}
+                <Route
+                  path="/mesas"
+                  element={
+                    <RequireRole roles={["mesero"]}>
+                      <MesasDashboard />
+                    </RequireRole>
+                  }
+                />
+
+                <Route
+                  path="/ops/pos"
+                  element={
+                    <RequireRole roles={["mesero"]}>
+                      <POSPage />
+                    </RequireRole>
+                  }
+                />
+                <Route
+                  path="/pos"
+                  element={
+                    <RequireRole roles={["mesero"]}>
+                      <POSPage />
+                    </RequireRole>
+                  }
+                />
+
+                <Route
+                  path="/ops/pedidos"
+                  element={
+                    <RequireRole roles={["mesero", "cocinero", "repartidor"]}>
+                      <OrdersOpsBoard />
+                    </RequireRole>
+                  }
+                />
+
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </ErrorBoundary>
 
-            {/* UI global persistente */}
             <CartPanel />
             <CartFab />
             <Toast />

@@ -1,3 +1,4 @@
+// src/components/Header.jsx
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/authContext";
 
@@ -9,10 +10,28 @@ export default function Header() {
     user?.role ?? user?.payload?.role ?? user?.data?.role ?? ""
   ).toLowerCase();
 
+  const empRole = String(
+    user?.employee_role ??
+      user?.payload?.employee_role ??
+      user?.data?.employee_role ??
+      ""
+  ).toLowerCase();
+
   const handleLogout = () => {
-    logout();       
+    logout();
     navigate("/");
   };
+
+  // Permisos para botones nuevos
+  const canSeeMesas = role === "admin" || empRole === "mesero";
+  const canSeePOS = role === "admin" || empRole === "mesero";
+  const canSeePedidos =
+    role === "admin" ||
+    empRole === "mesero" ||
+    empRole === "cocinero" ||
+    empRole === "repartidor";
+
+  const linkCls = ({ isActive }) => `pz-link ${isActive ? "active" : ""}`;
 
   return (
     <header className="pz-header">
@@ -26,32 +45,49 @@ export default function Header() {
         </Link>
 
         <nav className="pz-nav">
-          <NavLink to="/" end className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+          <NavLink to="/" end className={linkCls}>
             Menú
           </NavLink>
-          <NavLink to="/reservar" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+          <NavLink to="/reservar" className={linkCls}>
             Reservar
           </NavLink>
+
           {user && (
-            <NavLink to="/mis-reservas" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+            <NavLink to="/mis-reservas" className={linkCls}>
               Mis reservas
             </NavLink>
           )}
+
+          {canSeeMesas && (
+            <NavLink to="/mesas" className={linkCls}>
+              Mesas
+            </NavLink>
+          )}
+
+          {canSeePOS && (
+            <NavLink to="/ops/pos" className={linkCls}>
+              POS
+            </NavLink>
+          )}
+
+          {canSeePedidos && (
+            <NavLink to="/ops/pedidos" className={linkCls}>
+              Pedidos
+            </NavLink>
+          )}
+
           {role === "admin" && (
             <>
-              <NavLink to="/admin" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
-                Admin
-              </NavLink>
-              <NavLink to="/empleados" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+              <NavLink to="/empleados" className={linkCls}>
                 Empleados
               </NavLink>
-              <NavLink to="/orders" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+              <NavLink to="/orders" className={linkCls}>
                 Órdenes
               </NavLink>
-              <NavLink to="/delivery" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+              <NavLink to="/delivery" className={linkCls}>
                 Delivery
               </NavLink>
-              <NavLink to="/inventory" className={({ isActive }) => `pz-link ${isActive ? "active" : ""}`}>
+              <NavLink to="/inventory" className={linkCls}>
                 Inventario
               </NavLink>
             </>
@@ -64,12 +100,11 @@ export default function Header() {
               Perfil
             </Link>
           )}
+
           {!user ? (
-            <>
-              <Link to="/login" className="pz-btn pz-btn-outline">
-                Iniciar sesión
-              </Link>
-            </>
+            <Link to="/login" className="pz-btn pz-btn-outline">
+              Iniciar sesión
+            </Link>
           ) : (
             <div className="pz-user">
               <span className="pz-user-name">Hola, {user.name}</span>

@@ -1,4 +1,41 @@
-.modal { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; z-index:50; }
-.card { background:#fff; width:420px; max-width:calc(100% - 32px); border-radius:12px; padding:16px; display:grid; gap:8px; }
-.actions { display:flex; justify-content:flex-end; gap:10px; margin-top:8px; }
-.primary { background:#e54848; color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  display: grid;
+  gap: 10px;
+}
+.card h3 {
+  margin: 0 0 8px 0;
+}
+.card input,
+.card select {
+  width: 100%;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  outline: none;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+.primary {
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: none;
+}

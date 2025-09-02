@@ -1,66 +1,85 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
-const CartContext = createContext();
+const CartCtx = createContext(null);
+export const useCart = () => useContext(CartCtx);
+
+const STORAGE_KEY = "pz-cart";
+const PER_ITEM_MAX = 10;
+const CART_TOTAL_MAX = 10;
 
 export function CartProvider({ children }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState(() => {
     try {
-      const raw = localStorage.getItem("cart:v1");
+      const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch {
       return [];
     }
   });
 
-  const [flash, setFlash] = useState(null);
-  const showFlash = (msg) => {
-    setFlash(msg);
-    clearTimeout(showFlash._t);
-    showFlash._t = setTimeout(() => setFlash(null), 2000);
-  };
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   useEffect(() => {
-    localStorage.setItem("cart:v1", JSON.stringify(items));
-  }, [items]);
+    const onClear = () => {
+      setItems([]);
+      localStorage.removeItem(STORAGE_KEY);
+    };
+    window.addEventListener("pz:cart:clear", onClear);
+    return () => window.removeEventListener("pz:cart:clear", onClear);
+  }, []);
 
   const count = useMemo(() => items.reduce((a, b) => a + b.qty, 0), [items]);
   const total = useMemo(() => items.reduce((a, b) => a + b.price * b.qty, 0), [items]);
 
-  const add = (product, qty = 1) => {
-    setItems(prev => {
-      const i = prev.findIndex(p => p.id === product.id);
-      if (i >= 0) {
-        const nextQty = Math.min(prev[i].qty + qty, 20); // límite 20
-        if (prev[i].qty === 20) {
-          showFlash("No puedes agregar más de 20 unidades de este producto");
-          return prev;
-        }
-        const next = [...prev];
-        next[i] = { ...next[i], qty: nextQty };
-        showFlash("Se actualizó la cantidad correctamente");
-        return next;
-      }
-      const itemQty = Math.min(qty, 20);
-      showFlash("Se agregó correctamente");
-      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, qty: itemQty }];
-    });
-    setOpen(true);
+  const clampQtyForTotals = (id, desired) => {
+    const clean = Math.max(1, Math.min(PER_ITEM_MAX, Number(desired) || 1));
+    const otherSum = items.reduce((s, it) => (it.id === id ? s : s + it.qty), 0);
+    const maxAllowed = Math.max(0, CART_TOTAL_MAX - otherSum);
+    return Math.max(1, Math.min(clean, maxAllowed));
   };
 
-  const remove = id => setItems(prev => prev.filter(p => p.id !== id));
-  const setQty = (id, qty) => setItems(prev =>
-    prev.map(p => p.id === id ? { ...p, qty: Math.min(Math.max(1, qty), 20) } : p)
-  );
-  const clear = () => setItems([]);
+  const add = (product) => {
+    setItems((prev) => {
+      const exists = prev.find((p) => p.id === product.id);
+      if (exists) {
+        const nextQty = clampQtyForTotals(product.id, exists.qty + 1);
+        return prev.map((p) => (p.id === product.id ? { ...p, qty: nextQty } : p));
+      }
+      if (prev.reduce((s, it) => s + it.qty, 0) >= CART_TOTAL_MAX) return prev;
+      const startQty = clampQtyForTotals(product.id, 1);
+      return [...prev, { ...product, qty: startQty }];
+    });
+  };
 
-  return (
-    <CartContext.Provider
-      value={{ open, setOpen, items, count, total, add, remove, setQty, clear, flash }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+  const setQty = (id, qty) => {
+    setItems((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, qty: clampQtyForTotals(id, qty) } : p))
+    );
+  };
+
+  const remove = (id) => setItems((prev) => prev.filter((p) => p.id !== id));
+
+  const clear = () => {
+    setItems([]);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  const value = {
+    open,
+    setOpen,
+    items,
+    add,
+    setQty,
+    remove,
+    clear,
+    count,
+    total,
+    PER_ITEM_MAX,
+    CART_TOTAL_MAX,
+  };
+
+  return <CartCtx.Provider value={value}>{children}</CartCtx.Provider>;
 }
-
-export function useCart() { return useContext(CartContext); }

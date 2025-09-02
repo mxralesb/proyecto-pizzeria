@@ -8,8 +8,9 @@ export default function HeaderBar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
 
-  const role = String(
-    user?.role ?? user?.payload?.role ?? user?.data?.role ?? ""
+  const role = String(user?.role ?? user?.payload?.role ?? user?.data?.role ?? "").toLowerCase();
+  const empRole = String(
+    user?.employee_role ?? user?.payload?.employee_role ?? user?.data?.employee_role ?? ""
   ).toLowerCase();
 
   return (
@@ -23,12 +24,17 @@ export default function HeaderBar() {
         <nav className={styles.nav}>
           <Link to="/" className={`${styles.link} ${pathname === "/" ? styles.active : ""}`}>Menú</Link>
           <Link to="/reservar" className={`${styles.link} ${pathname === "/reservar" ? styles.active : ""}`}>Reservar</Link>
-          
+
           {user && (
             <Link to="/mis-reservas" className={`${styles.link} ${pathname === "/mis-reservas" ? styles.active : ""}`}>
               Mis reservas
             </Link>
           )}
+
+          {(role === "admin" || empRole === "mesero") && (
+            <Link to="/mesas" className={`${styles.link} ${pathname === "/mesas" ? styles.active : ""}`}>Mesas</Link>
+          )}
+
           {role === "admin" && (
             <>
               <Link to="/empleados" className={`${styles.link} ${pathname === "/empleados" ? styles.active : ""}`}>Empleados</Link>
@@ -45,9 +51,7 @@ export default function HeaderBar() {
             🛒{count > 0 && <span className={styles.badge}>{count}</span>}
           </button>
 
-          {role === "cliente" && (
-            <Link to="/perfil" className={styles.btnOutline}>Perfil</Link>
-          )}
+          {role === "cliente" && <Link to="/perfil" className={styles.btnOutline}>Perfil</Link>}
 
           {!user ? (
             <Link to="/login" className={styles.btnOutline}>Iniciar sesión</Link>

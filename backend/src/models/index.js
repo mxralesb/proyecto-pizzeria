@@ -1,17 +1,17 @@
 import { sequelize } from "../config/database.js";
+import "dotenv/config";
 
 import { User } from "./user.js";
 import { MenuItem } from "./menuItem.js";
 import { Reservation } from "./reservation.js";
 import { EmployeeRole } from "./employeeRole.js";
 import { Employee } from "./employee.js";
-
 import { Cliente } from "./cliente.js";
 import { Direccion } from "./direccion.js";
 import { Telefono } from "./telefono.js";
-
 import { Order } from "./order.js";
 import { OrderItem } from "./orderItem.js";
+import { Mesa } from "./mesa.js";
 
 function linkOnce(model, assocName, fn) {
   const already =
@@ -67,4 +67,5 @@ export {
   Telefono,
   Order,
   OrderItem,
+  Mesa,
 };
