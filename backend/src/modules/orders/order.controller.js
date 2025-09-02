@@ -36,7 +36,7 @@ export const createOrder = async (req, res) => {
     const tax = +(subtotal * 0.12).toFixed(2);
     const total = +(subtotal + tax).toFixed(2);
 
-    const estado = "pagada";
+    const estado = metodo_pago === "efectivo" ? "pendiente" : "pagada";
 
     const order = await Order.create({
       id_cliente: cliente.id_cliente,

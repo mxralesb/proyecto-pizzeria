@@ -23,6 +23,7 @@ export default function HeaderBar() {
         <nav className={styles.nav}>
           <Link to="/" className={`${styles.link} ${pathname === "/" ? styles.active : ""}`}>Menú</Link>
           <Link to="/reservar" className={`${styles.link} ${pathname === "/reservar" ? styles.active : ""}`}>Reservar</Link>
+          
           {user && (
             <Link to="/mis-reservas" className={`${styles.link} ${pathname === "/mis-reservas" ? styles.active : ""}`}>
               Mis reservas

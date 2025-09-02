@@ -44,7 +44,6 @@ export default function CheckoutPage() {
     if (!items.length) navigate("/");
   }, [items, navigate]);
 
-  // Limpia datos de tarjeta si cambian a efectivo (opcional pero útil)
   useEffect(() => {
     if (form.payment === "efectivo") {
       setForm((f) => ({
@@ -57,32 +56,16 @@ export default function CheckoutPage() {
     }
   }, [form.payment]);
 
-  // 🪄 Formatear inputs especiales
   const onChange = (e) => {
     let { name, value } = e.target;
 
-    if (name === "cardNumber") {
-      value = value.replace(/\D/g, ""); // solo dígitos
-      value = value.slice(0, 16); // máximo 16 dígitos
-      value = value.replace(/(.{4})/g, "$1 ").trim(); // espacio cada 4
-    }
-
-    if (name === "cardName") {
-      value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "");
-      value = value.toUpperCase();
-    }
-
+    if (name === "cardNumber") value = value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
+    if (name === "cardName") value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").toUpperCase();
     if (name === "cardExp") {
-      value = value.replace(/\D/g, ""); // solo dígitos
-      value = value.slice(0, 4); // máximo 4 números
-      if (value.length >= 3) {
-        value = value.slice(0, 2) + "/" + value.slice(2); // MM/AA
-      }
+      value = value.replace(/\D/g, "").slice(0, 4);
+      if (value.length >= 3) value = value.slice(0, 2) + "/" + value.slice(2);
     }
-
-    if (name === "cardCvv") {
-      value = value.replace(/\D/g, "").slice(0, 4); // solo dígitos, máx 4
-    }
+    if (name === "cardCvv") value = value.replace(/\D/g, "").slice(0, 4);
 
     setForm((f) => ({ ...f, [name]: value }));
   };
@@ -94,32 +77,30 @@ export default function CheckoutPage() {
 
   const generateInvoicePDF = (order) => {
     const doc = new jsPDF();
-    const dateStr = dayjs(order?.createdAt || new Date()).format(
-      "DD/MM/YYYY HH:mm"
-    );
+    const dateStr = dayjs(order?.createdAt || new Date()).format("DD/MM/YYYY HH:mm");
 
     doc.setFontSize(18);
     doc.text("PIZZAS - FACTURA", 14, 18);
     doc.setFontSize(11);
     doc.text(`No. Pedido: ${order?.id_order ?? "N/A"}`, 14, 26);
     doc.text(`Fecha: ${dateStr}`, 14, 32);
+    doc.text(`Estado: ${order.estado.toUpperCase()}`, 14, 38);
 
-    doc.text("Cliente:", 14, 42);
-    doc.text(`${form.name}`, 40, 42);
-    doc.text("Correo:", 14, 48);
-    doc.text(`${form.email}`, 40, 48);
-    doc.text("Teléfono:", 14, 54);
-    doc.text(`${form.phone || "-"}`, 40, 54);
-    doc.text("Dirección:", 14, 60);
-    doc.text(`${form.address}, ${form.city}`, 40, 60);
-    doc.text("Pago:", 14, 66);
-    doc.text(form.payment === "tarjeta" ? "Tarjeta" : "Efectivo", 40, 66);
+    doc.text("Cliente:", 14, 46);
+    doc.text(`${form.name}`, 40, 46);
+    doc.text("Correo:", 14, 52);
+    doc.text(`${form.email}`, 40, 52);
+    doc.text("Teléfono:", 14, 58);
+    doc.text(`${form.phone || "-"}`, 40, 58);
+    doc.text("Dirección:", 14, 64);
+    doc.text(`${form.address}, ${form.city}`, 40, 64);
+    doc.text("Pago:", 14, 70);
+    doc.text(form.payment === "tarjeta" ? "Tarjeta" : "Efectivo", 40, 70);
 
-    let y = 78;
+    let y = 82;
     doc.setFontSize(12);
     doc.text("Detalle de compra", 14, y);
     y += 6;
-
     doc.setFontSize(10);
     doc.text("Producto", 14, y);
     doc.text("Cant.", 120, y);
@@ -170,51 +151,43 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (!items.length) return;
 
-    // 🔒 Validaciones extra si es tarjeta
+    // Validaciones de tarjeta si aplica
     if (form.payment === "tarjeta") {
       const cardNameRegex = /^[A-ZÀ-Ÿ\s]{2,}$/;
-      const cardNumberRegex = /^\d{16}$/;           // 16 dígitos exactos
-      const cardExpRegex = /^(0[1-9]|1[0-2])\/\d{2}$/; // MM/AA
-      const cardCvvRegex = /^\d{3,4}$/;             // 3 o 4 dígitos
+      const cardNumberRegex = /^\d{16}$/;
+      const cardExpRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+      const cardCvvRegex = /^\d{3,4}$/;
 
-            // Nombre de la tarjeta
       if (!cardNameRegex.test(form.cardName)) {
         alert("El nombre de la tarjeta solo puede contener letras y espacios.");
         return;
       }
-
-      // Número
       if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, ""))) {
         alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
         return;
       }
-
-      // Expiración (formato + mes y año actuales)
       if (!cardExpRegex.test(form.cardExp)) {
         alert("Fecha de expiración inválida. Usa formato MM/AA.");
         return;
       } else {
         const [mm, yy] = form.cardExp.split("/").map((v) => parseInt(v, 10));
-        const currentYear = new Date().getFullYear() % 100; // ej. 2025 -> 25
-        const currentMonth = new Date().getMonth() + 1;     // 1-12
-
-        if (mm < 1 || mm > 12) {
-          alert("El mes de expiración debe estar entre 01 y 12.");
-          return;
-        }
-        if (yy < currentYear) {
-          alert("La tarjeta ya expiró (año inválido).");
-          return;
-        }
-        if (yy === currentYear && mm < currentMonth) {
-          alert("La tarjeta ya expiró (mes inválido).");
+        const currentYear = new Date().getFullYear() % 100;
+        const currentMonth = new Date().getMonth() + 1;
+        if (mm < 1 || mm > 12 || yy < currentYear || (yy === currentYear && mm < currentMonth)) {
+          alert("La tarjeta ya expiró.");
           return;
         }
       }
-
-      // CVV
       if (!cardCvvRegex.test(form.cardCvv)) {
         alert("CVV inválido. Debe tener 3 o 4 dígitos.");
+        return;
+      }
+    }
+
+    // Validar máximo 20 unidades por producto
+    for (const it of items) {
+      if (it.qty > 20) {
+        alert(`No puedes pedir más de 20 unidades de ${it.name}.`);
         return;
       }
     }
@@ -233,6 +206,7 @@ export default function CheckoutPage() {
         subtotal,
         tax,
         total,
+        estado: form.payment === "efectivo" ? "pendiente" : "pagada",
         items: items.map((it) => ({
           id: it.id,
           name: it.name || it.title,
@@ -263,143 +237,61 @@ export default function CheckoutPage() {
       {!items.length ? (
         <p>Tu carrito está vacío.</p>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.2fr 1fr",
-            gap: 18,
-            alignItems: "start",
-          }}
-        >
+        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18, alignItems: "start" }}>
           <form className="pz-form" onSubmit={submit}>
             <h3>Datos del cliente</h3>
             <label>
               Nombre completo
-              <input
-                className="pz-input"
-                name="name"
-                value={form.name}
-                onChange={onChange}
-                required
-              />
+              <input className="pz-input" name="name" value={form.name} onChange={onChange} required />
             </label>
             <label>
               Correo
-              <input
-                className="pz-input"
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={onChange}
-                required
-              />
+              <input className="pz-input" type="email" name="email" value={form.email} onChange={onChange} required />
             </label>
             <label>
               Teléfono
-              <input
-                className="pz-input"
-                name="phone"
-                value={form.phone}
-                onChange={onChange}
-                inputMode="tel"
-              />
+              <input className="pz-input" name="phone" value={form.phone} onChange={onChange} inputMode="tel" />
             </label>
             <label>
               Dirección
-              <input
-                className="pz-input"
-                name="address"
-                value={form.address}
-                onChange={onChange}
-              />
+              <input className="pz-input" name="address" value={form.address} onChange={onChange} />
             </label>
             <label>
               Ciudad
-              <input
-                className="pz-input"
-                name="city"
-                value={form.city}
-                onChange={onChange}
-              />
+              <input className="pz-input" name="city" value={form.city} onChange={onChange} />
             </label>
 
             <h3>Método de pago</h3>
             <div style={{ display: "flex", gap: 10 }}>
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="payment"
-                  value="tarjeta"
-                  checked={form.payment === "tarjeta"}
-                  onChange={onChange}
-                />
+                <input type="radio" name="payment" value="tarjeta" checked={form.payment === "tarjeta"} onChange={onChange} />
                 Tarjeta
               </label>
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input
-                  type="radio"
-                  name="payment"
-                  value="efectivo"
-                  checked={form.payment === "efectivo"}
-                  onChange={onChange}
-                />
+                <input type="radio" name="payment" value="efectivo" checked={form.payment === "efectivo"} onChange={onChange} />
                 Efectivo al recibir
               </label>
             </div>
 
             {form.payment === "tarjeta" && (
               <div className="pz-card" style={{ padding: 14 }}>
-                <h4 style={{ margin: 0, marginBottom: 10 }}>
-                  Datos de tarjeta
-                </h4>
+                <h4 style={{ margin: 0, marginBottom: 10 }}>Datos de tarjeta</h4>
                 <label>
                   Nombre en la tarjeta
-                  <input
-                    className="pz-input"
-                    name="cardName"
-                    value={form.cardName}
-                    onChange={onChange}
-                    required={form.payment === "tarjeta"}
-                    autoComplete="cc-name"
-                  />
+                  <input className="pz-input" name="cardName" value={form.cardName} onChange={onChange} required autoComplete="cc-name" />
                 </label>
                 <label>
                   Número de tarjeta
-                  <input
-                    className="pz-input"
-                    name="cardNumber"
-                    inputMode="numeric"
-                    value={form.cardNumber}
-                    onChange={onChange}
-                    placeholder="4111 1111 1111 1111"
-                    required={form.payment === "tarjeta"}
-                    autoComplete="cc-number"
-                  />
+                  <input className="pz-input" name="cardNumber" inputMode="numeric" value={form.cardNumber} onChange={onChange} placeholder="4111 1111 1111 1111" required autoComplete="cc-number" />
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label>
                     Expiración (MM/AA)
-                    <input
-                      className="pz-input"
-                      name="cardExp"
-                      placeholder="MM/AA"
-                      value={form.cardExp}
-                      onChange={onChange}
-                      required={form.payment === "tarjeta"}
-                      autoComplete="cc-exp"
-                    />
+                    <input className="pz-input" name="cardExp" placeholder="MM/AA" value={form.cardExp} onChange={onChange} required autoComplete="cc-exp" />
                   </label>
                   <label>
                     CVV
-                    <input
-                      className="pz-input"
-                      name="cardCvv"
-                      inputMode="numeric"
-                      value={form.cardCvv}
-                      onChange={onChange}
-                      required={form.payment === "tarjeta"}
-                      autoComplete="cc-csc"
-                    />
+                    <input className="pz-input" name="cardCvv" inputMode="numeric" value={form.cardCvv} onChange={onChange} required autoComplete="cc-csc" />
                   </label>
                 </div>
               </div>
@@ -417,12 +309,8 @@ export default function CheckoutPage() {
             <ul className="pz-list" style={{ marginBottom: 10 }}>
               {items.map((it) => (
                 <li key={it.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>
-                    {(it.name || it.title) ?? `Item ${it.id}`} × {it.qty || 1}
-                  </span>
-                  <strong>
-                    Q {(((Number(it.price) || 0) * (Number(it.qty) || 1))).toFixed(2)}
-                  </strong>
+                  <span>{(it.name || it.title) ?? `Item ${it.id}`} × {it.qty || 1}</span>
+                  <strong>Q {((Number(it.price) || 0) * (Number(it.qty) || 1)).toFixed(2)}</strong>
                 </li>
               ))}
             </ul>
@@ -435,14 +323,7 @@ export default function CheckoutPage() {
                 <span>IVA (12%)</span>
                 <span>Q {tax.toFixed(2)}</span>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontWeight: 700,
-                  marginTop: 6,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 6 }}>
                 <span>Total</span>
                 <span>Q {total.toFixed(2)}</span>
               </div>

@@ -5,8 +5,12 @@ const CartContext = createContext();
 export function CartProvider({ children }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState(() => {
-    try { const raw = localStorage.getItem("cart:v1"); return raw ? JSON.parse(raw) : []; }
-    catch { return []; }
+    try {
+      const raw = localStorage.getItem("cart:v1");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
   });
 
   const [flash, setFlash] = useState(null);
@@ -16,7 +20,9 @@ export function CartProvider({ children }) {
     showFlash._t = setTimeout(() => setFlash(null), 2000);
   };
 
-  useEffect(() => { localStorage.setItem("cart:v1", JSON.stringify(items)); }, [items]);
+  useEffect(() => {
+    localStorage.setItem("cart:v1", JSON.stringify(items));
+  }, [items]);
 
   const count = useMemo(() => items.reduce((a, b) => a + b.qty, 0), [items]);
   const total = useMemo(() => items.reduce((a, b) => a + b.price * b.qty, 0), [items]);
@@ -25,18 +31,27 @@ export function CartProvider({ children }) {
     setItems(prev => {
       const i = prev.findIndex(p => p.id === product.id);
       if (i >= 0) {
+        const nextQty = Math.min(prev[i].qty + qty, 20); // límite 20
+        if (prev[i].qty === 20) {
+          showFlash("No puedes agregar más de 20 unidades de este producto");
+          return prev;
+        }
         const next = [...prev];
-        next[i] = { ...next[i], qty: next[i].qty + qty };
+        next[i] = { ...next[i], qty: nextQty };
+        showFlash("Se actualizó la cantidad correctamente");
         return next;
       }
-      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, qty }];
+      const itemQty = Math.min(qty, 20);
+      showFlash("Se agregó correctamente");
+      return [...prev, { id: product.id, name: product.name, price: product.price, image: product.image, qty: itemQty }];
     });
-    showFlash("Se agregó correctamente");
     setOpen(true);
   };
 
   const remove = id => setItems(prev => prev.filter(p => p.id !== id));
-  const setQty = (id, qty) => setItems(prev => prev.map(p => (p.id === id ? { ...p, qty: Math.max(1, qty) } : p)));
+  const setQty = (id, qty) => setItems(prev =>
+    prev.map(p => p.id === id ? { ...p, qty: Math.min(Math.max(1, qty), 20) } : p)
+  );
   const clear = () => setItems([]);
 
   return (

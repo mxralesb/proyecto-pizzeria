@@ -69,9 +69,6 @@ export default function Header() {
               <Link to="/login" className="pz-btn pz-btn-outline">
                 Iniciar sesión
               </Link>
-              <Link to="/registro" className="pz-btn pz-btn-primary">
-                Crear cuenta
-              </Link>
             </>
           ) : (
             <div className="pz-user">

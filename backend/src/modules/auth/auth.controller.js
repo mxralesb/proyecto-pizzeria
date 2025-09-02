@@ -5,7 +5,6 @@ import { User } from "../../models/user.js";
 import { sendMail } from "../../utils/mailer.js";
 import { ClienteProfile } from "../../models/clienteProfile.js";
 
-
 // REGISTRO DE CLIENTE
 export const register = async (req, res) => {
   try {
@@ -13,7 +12,8 @@ export const register = async (req, res) => {
 
     // Verificar si ya existe el email
     const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(400).json({ error: "El correo ya está registrado" });
+    if (existing)
+      return res.status(400).json({ error: "El correo ya está registrado" });
 
     // Encriptar password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -24,10 +24,10 @@ export const register = async (req, res) => {
         email,
         password: hashedPassword,
         role: role || "cliente",
-        ClienteProfile: clienteProfile
+        ClienteProfile: clienteProfile,
       },
       {
-        include: [ClienteProfile] // importante para crear el perfil junto con el user
+        include: [ClienteProfile], // importante para crear el perfil junto con el user
       }
     );
 
@@ -38,34 +38,58 @@ export const register = async (req, res) => {
   }
 };
 
-export const login = async (req,res)=>{
-  try{
+// LOGIN
+export const login = async (req, res) => {
+  try {
     const { email, password } = req.body;
-    const user = await User.findOne({ where:{ email }});
-    if(!user) return res.status(400).json({ error:"Credenciales" });
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: "Correo no registrado" });
+
     const ok = await bcrypt.compare(password, user.password);
-    if(!ok) return res.status(400).json({ error:"Credenciales" });
-    const token = jwt.sign({ id:user.id, role:user.role, name:user.name }, process.env.JWT_SECRET, { expiresIn:"8h" });
-    res.json({ token, user:{ id:user.id, name:user.name, role:user.role } });
-  }catch(e){ res.status(500).json({ error:e.message }); }
+    if (!ok) return res.status(400).json({ error: "Contraseña inválida" });
+
+    const token = jwt.sign(
+      { id: user.id, role: user.role, name: user.name },
+      process.env.JWT_SECRET,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      token,
+      user: { id: user.id, name: user.name, role: user.role, email: user.email },
+    });
+  } catch (e) {
+    console.error("LOGIN ERROR:", e);
+    res.status(500).json({ error: "Error en el servidor" });
+  }
 };
 
-export const recoverPassword = async (req,res)=>{
-  try{
+// RECUPERAR CONTRASEÑA
+export const recoverPassword = async (req, res) => {
+  try {
     const { email } = req.body;
-    const user = await User.findOne({ where:{ email }});
-    if(!user) return res.status(404).json({error:"Correo no registrado"});
+
+    const user = await User.findOne({ where: { email } });
+    if (!user) return res.status(404).json({ error: "Correo no registrado" });
+
     const temp = crypto.randomBytes(6).toString("base64url");
     const hash = await bcrypt.hash(temp, 10);
-    await User.update({ password: hash }, { where:{ id:user.id }});
+
+    await User.update({ password: hash }, { where: { id: user.id } });
+
     await sendMail({
       to: email,
       subject: "Tu nueva contraseña - Pizzería",
-      html: `<h2>Hola ${user.name || ""}</h2><p>Generamos una clave temporal:</p><p style="font-size:18px;font-weight:700;color:#d64545">${temp}</p><p>Inicia sesión y cámbiala en tu perfil.</p>`
+      html: `<h2>Hola ${user.name || ""}</h2>
+             <p>Generamos una clave temporal:</p>
+             <p style="font-size:18px;font-weight:700;color:#d64545">${temp}</p>
+             <p>Inicia sesión y cámbiala en tu perfil.</p>`,
     });
-    res.json({ ok:true });
-  }catch(e){
+
+    res.json({ ok: true });
+  } catch (e) {
     console.error("RECOVER ERROR:", e);
-    res.status(500).json({error:"Error al enviar correo"});
+    res.status(500).json({ error: "Error al enviar correo" });
   }
 };

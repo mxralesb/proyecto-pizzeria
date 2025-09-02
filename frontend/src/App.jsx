@@ -70,7 +70,6 @@ export default function App() {
                     </RequireClient>
                   }
                 />
-
                 {/* Admin */}
                 <Route
                   path="/empleados"
