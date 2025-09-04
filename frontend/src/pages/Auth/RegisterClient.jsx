@@ -14,7 +14,6 @@ export default function RegisterClient() {
     correo_electronico: "",
     contrasena: "",
     confirmar: "",
-    usarExtras: false,
     direccion: {
       tipo_direccion: "Casa",
       calle: "",
@@ -38,6 +37,23 @@ export default function RegisterClient() {
   const changeTel = (k, v) =>
     setForm((s) => ({ ...s, telefono: { ...s.telefono, [k]: v } }));
 
+  // Validación en tiempo real
+  const handleNameChange = (field, value) => {
+    // Solo letras, espacios y acentos
+    const clean = value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, "");
+    change(field, clean);
+  };
+
+  const handlePhoneChange = (value) => {
+    // Solo dígitos
+    let digits = value.replace(/\D/g, "");
+    // Limitar a 8 dígitos
+    digits = digits.slice(0, 8);
+    // Espacio cada 4
+    const formatted = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+    changeTel("numero", formatted);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setError("");
@@ -56,14 +72,21 @@ export default function RegisterClient() {
       apellido: form.apellido,
       correo_electronico: form.correo_electronico,
       contrasena: form.contrasena,
-      ...(form.usarExtras ? { direccion: form.direccion, telefono: form.telefono } : {}),
+      direccion: form.direccion,
+      telefono: {
+        ...form.telefono,
+        numero: form.telefono.numero.replace(/\s/g, ""), // Guardar solo dígitos
+      },
     };
 
     setLoading(true);
     try {
       const { data } = await registerClient(payload);
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user ?? { role: "cliente", name: `${form.nombre} ${form.apellido}` }));
+      localStorage.setItem(
+        "user",
+        JSON.stringify(data.user ?? { role: "cliente", name: `${form.nombre} ${form.apellido}` })
+      );
       window.location.href = "/perfil";
     } catch (e) {
       setError(e?.response?.data?.error || "No se pudo registrar");
@@ -77,12 +100,13 @@ export default function RegisterClient() {
     setLoadingGoogle(true);
     try {
       const { idToken } = await googleSignInAndGetIdToken();
-      const extra = {};
-      if (form.usarExtras) {
-        extra.direccion = form.direccion;
-        extra.telefono = form.telefono;
-      }
-      const { data } = await loginWithGoogleIdTokenCliente(idToken, extra);
+      const { data } = await loginWithGoogleIdTokenCliente(idToken, {
+        direccion: form.direccion,
+        telefono: {
+          ...form.telefono,
+          numero: form.telefono.numero.replace(/\s/g, ""),
+        },
+      });
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       window.location.href = "/perfil";
@@ -100,7 +124,6 @@ export default function RegisterClient() {
           <span style={{ fontSize: 24 }}>👤</span>
           <div>
             <h3>Crear cuenta de cliente</h3>
-            <p>Accede a tu historial, reservas y pedidos.</p>
           </div>
         </div>
 
@@ -125,7 +148,7 @@ export default function RegisterClient() {
             Nombre *
             <input
               value={form.nombre}
-              onChange={(e) => change("nombre", e.target.value)}
+              onChange={(e) => handleNameChange("nombre", e.target.value)}
             />
           </label>
 
@@ -133,7 +156,7 @@ export default function RegisterClient() {
             Apellido *
             <input
               value={form.apellido}
-              onChange={(e) => change("apellido", e.target.value)}
+              onChange={(e) => handleNameChange("apellido", e.target.value)}
             />
           </label>
 
@@ -164,71 +187,46 @@ export default function RegisterClient() {
             />
           </label>
 
-          <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <h4>Dirección</h4>
+          <label>
+            Tipo (Casa/Oficina/Otro)
             <input
-              type="checkbox"
-              checked={form.usarExtras}
-              onChange={(e) => change("usarExtras", e.target.checked)}
+              value={form.direccion.tipo_direccion}
+              onChange={(e) => changeDir("tipo_direccion", e.target.value)}
             />
-            Capturar dirección y teléfono ahora
+          </label>
+          <label>
+            Calle
+            <input value={form.direccion.calle} onChange={(e) => changeDir("calle", e.target.value)} />
+          </label>
+          <label>
+            Ciudad
+            <input value={form.direccion.ciudad} onChange={(e) => changeDir("ciudad", e.target.value)} />
+          </label>
+          <label>
+            Estado
+            <input value={form.direccion.estado} onChange={(e) => changeDir("estado", e.target.value)} />
+          </label>
+          <label>
+            Código postal
+            <input
+              value={form.direccion.codigo_postal}
+              onChange={(e) => changeDir("codigo_postal", e.target.value)}
+            />
           </label>
 
-          {form.usarExtras && (
-            <>
-              <h4>Dirección</h4>
-              <label>
-                Tipo (Casa/Oficina/Otro)
-                <input
-                  value={form.direccion.tipo_direccion}
-                  onChange={(e) => changeDir("tipo_direccion", e.target.value)}
-                />
-              </label>
-              <label>
-                Calle
-                <input
-                  value={form.direccion.calle}
-                  onChange={(e) => changeDir("calle", e.target.value)}
-                />
-              </label>
-              <label>
-                Ciudad
-                <input
-                  value={form.direccion.ciudad}
-                  onChange={(e) => changeDir("ciudad", e.target.value)}
-                />
-              </label>
-              <label>
-                Estado
-                <input
-                  value={form.direccion.estado}
-                  onChange={(e) => changeDir("estado", e.target.value)}
-                />
-              </label>
-              <label>
-                Código postal
-                <input
-                  value={form.direccion.codigo_postal}
-                  onChange={(e) => changeDir("codigo_postal", e.target.value)}
-                />
-              </label>
-
-              <h4>Teléfono</h4>
-              <label>
-                Número
-                <input
-                  value={form.telefono.numero}
-                  onChange={(e) => changeTel("numero", e.target.value)}
-                />
-              </label>
-              <label>
-                Tipo (Movil/Casa/Trabajo)
-                <input
-                  value={form.telefono.tipo}
-                  onChange={(e) => changeTel("tipo", e.target.value)}
-                />
-              </label>
-            </>
-          )}
+          <h4>Teléfono</h4>
+          <label>
+            Número
+            <input
+              value={form.telefono.numero}
+              onChange={(e) => handlePhoneChange(e.target.value)}
+            />
+          </label>
+          <label>
+            Tipo (Movil/Casa/Trabajo)
+            <input value={form.telefono.tipo} onChange={(e) => changeTel("tipo", e.target.value)} />
+          </label>
 
           <button disabled={loading} className="pz-btn pz-btn-primary pz-btn-block">
             {loading ? "Creando…" : "Crear cuenta"}
@@ -237,9 +235,6 @@ export default function RegisterClient() {
 
         <div className="pz-auth-foot">
           <span>¿Ya tienes cuenta?</span>
-          <Link className="pz-link-minor" to="/login">
-            Iniciar sesión
-          </Link>
           <Link className="pz-link-minor" to="/login">
             Iniciar sesión
           </Link>
