@@ -12,11 +12,10 @@ import { Telefono } from "./telefono.js";
 import { Order } from "./order.js";
 import { OrderItem } from "./orderItem.js";
 import { Mesa } from "./mesa.js";
+import { InventoryItem } from "./inventoryItem.js"; 
 
 function linkOnce(model, assocName, fn) {
-  const already =
-    model.associations &&
-    Object.prototype.hasOwnProperty.call(model.associations, assocName);
+  const already = model.associations && Object.prototype.hasOwnProperty.call(model.associations, assocName);
   if (!already) fn();
 }
 
@@ -55,6 +54,13 @@ linkOnce(MenuItem, "orderItems", () => {
   MenuItem.hasMany(OrderItem, { foreignKey: "id_menu_item", as: "orderItems" });
 });
 
+linkOnce(MenuItem, "stock", () => {
+  MenuItem.hasOne(InventoryItem, { foreignKey: "id_menu_item", as: "stock" });
+});
+linkOnce(InventoryItem, "menuItem", () => {
+  InventoryItem.belongsTo(MenuItem, { foreignKey: "id_menu_item", as: "menuItem" });
+});
+
 export {
   sequelize,
   User,
@@ -68,4 +74,5 @@ export {
   Order,
   OrderItem,
   Mesa,
+  InventoryItem, 
 };

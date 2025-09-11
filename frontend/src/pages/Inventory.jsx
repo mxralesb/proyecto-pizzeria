@@ -1,149 +1,357 @@
-// src/pages/Inventory.jsx
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import styles from "./Inventory.module.css";
+import {
+  getInventory,
+  getAddable,
+  createInventory,
+  replenishInventory,
+  updateInventory,
+  removeInventory,
+} from "../api/inventory";
 
-const initialProducts = [
-  { id: 1, name: "Margarita", type: "Pizza", stock: 120, price: 50 },
-  { id: 2, name: "Pepperoni", type: "Pizza", stock: 95, price: 55 },
-  { id: 3, name: "Hawaiana", type: "Pizza", stock: 60, price: 52 },
-  { id: 4, name: "Cuatro Quesos", type: "Pizza", stock: 40, price: 60 },
-  { id: 5, name: "Barbacoa", type: "Pizza", stock: 25, price: 58 },
-  { id: 6, name: "Vegetariana", type: "Pizza", stock: 15, price: 48 },
-  { id: 7, name: "Cannolis", type: "Postre", stock: 50, price: 25 },
-  { id: 8, name: "Tiramisú", type: "Postre", stock: 30, price: 28 },
-  { id: 9, name: "Brownie con Helado", type: "Postre", stock: 20, price: 30 },
-  { id: 10, name: "Cheesecake", type: "Postre", stock: 10, price: 32 },
-  { id: 11, name: "Coca-Cola", type: "Bebida", stock: 150, price: 10 },
-  { id: 12, name: "7-Up", type: "Bebida", stock: 100, price: 10 },
-  { id: 13, name: "Fanta de Naranja", type: "Bebida", stock: 90, price: 10 },
-  { id: 14, name: "Grappete", type: "Bebida", stock: 60, price: 10 },
-  { id: 15, name: "Doctor Pepper", type: "Bebida", stock: 40, price: 12 },
-];
+function Modal({ open, title, children, onClose }) {
+  if (!open) return null;
+  return (
+    <div className={styles.modalBackdrop} onMouseDown={onClose}>
+      <div className={styles.modalCard} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={styles.modalHead}>
+          <h4 className={styles.modalTitle}>{title}</h4>
+          <button className={styles.iconBtn} onClick={onClose} aria-label="Cerrar">✕</button>
+        </div>
+        <div className={styles.modalBody}>{children}</div>
+      </div>
+    </div>
+  );
+}
 
 export default function Inventory() {
-  const [products, setProducts] = useState(initialProducts);
-  const [filters, setFilters] = useState({ search: "", type: "" });
-  const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
+  const [items, setItems] = useState([]);
+  const [addable, setAddable] = useState([]);
+  const [q, setQ] = useState("");
+  const [type, setType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState("");
 
-  const sortedProducts = useMemo(() => {
-    let filtered = products.filter(p => {
-      const matchSearch = p.name.toLowerCase().includes(filters.search.toLowerCase());
-      const matchType = filters.type ? p.type === filters.type : true;
-      return matchSearch && matchType;
+  const [modal, setModal] = useState({ open: false, kind: null, row: null });
+
+  const [formAdd, setFormAdd] = useState({ id_menu_item: "", stock: "0", price: "" });
+  const [formRepl, setFormRepl] = useState({ amount: "1" });
+  const [formUpd, setFormUpd] = useState({ name: "", stock: "", price: "" });
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  }
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const [{ data: inv }, { data: add }] = await Promise.all([getInventory(), getAddable()]);
+      setItems(Array.isArray(inv) ? inv : []);
+      setAddable(Array.isArray(add) ? add : []);
+    } catch {
+      setItems([]);
+      setAddable([]);
+      showToast("No se pudo cargar el inventario.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { loadAll(); }, []);
+
+  const filtered = useMemo(() => {
+    const qx = q.trim().toLowerCase();
+    return items.filter((r) => {
+      const okText = !qx || (r.name ?? "").toLowerCase().includes(qx);
+      const okType = !type || r.type === type;
+      return okText && okType;
     });
+  }, [items, q, type]);
 
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
-        if (sortConfig.key === "stock" || sortConfig.key === "price") {
-          return sortConfig.direction === "asc" ? a[sortConfig.key] - b[sortConfig.key] : b[sortConfig.key] - a[sortConfig.key];
-        }
-        return 0;
-      });
+  const openAdd = () => {
+    setFormAdd({ id_menu_item: addable[0]?.id_menu_item ?? "", stock: "0", price: "" });
+    setModal({ open: true, kind: "add", row: null });
+  };
+  const openRepl = (row) => {
+    setFormRepl({ amount: "1" });
+    setModal({ open: true, kind: "repl", row });
+  };
+  const openUpd = (row) => {
+    setFormUpd({
+      name: row.name || "",
+      stock: String(row.stock),
+      price: row.price == null ? "" : String(row.price)
+    });
+    setModal({ open: true, kind: "upd", row });
+  };
+  const openDel = (row) => setModal({ open: true, kind: "del", row });
+  const closeModal = () => setModal({ open: false, kind: null, row: null });
+
+  async function submitAdd(e) {
+    e.preventDefault();
+    if (!formAdd.id_menu_item) return;
+    const stock = Number(formAdd.stock);
+    if (!Number.isFinite(stock) || stock < 0) return showToast("Stock inicial inválido.");
+    const payload = { id_menu_item: Number(formAdd.id_menu_item), stock };
+    if (formAdd.price !== "") {
+      const price = Number(formAdd.price);
+      if (!Number.isFinite(price) || price < 0) return showToast("Precio inválido.");
+      payload.price = price;
     }
-
-    return filtered;
-  }, [products, filters, sortConfig]);
-
-  const handleSort = (key) => {
-    let direction = "asc";
-    if (sortConfig.key === key && sortConfig.direction === "asc") direction = "desc";
-    setSortConfig({ key, direction });
-  };
-
-  const handleReplenish = (id) => {
-    const amount = parseInt(prompt("Cantidad a reabastecer:"), 10);
-    if (!isNaN(amount) && amount > 0) {
-      setProducts(products.map(p => p.id === id ? { ...p, stock: p.stock + amount } : p));
-      alert("Stock actualizado y orden generada (simulación frontend).");
+    try {
+      setSaving(true);
+      const { data } = await createInventory(payload);
+      setItems((xs) => [...xs, data].sort((a, b) => a.id - b.id));
+      const { data: add } = await getAddable();
+      setAddable(add);
+      showToast("Producto agregado.");
+      closeModal();
+    } catch {
+      showToast("No se pudo agregar.");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  const handleUpdate = (id) => {
-    const newStock = parseInt(prompt("Ingrese stock correcto:"), 10);
-    if (!isNaN(newStock) && newStock >= 0) {
-      setProducts(products.map(p => p.id === id ? { ...p, stock: newStock } : p));
-      alert("Stock corregido (simulación frontend).");
+  async function submitRepl(e) {
+    e.preventDefault();
+    const amount = Number(formRepl.amount);
+    if (!Number.isFinite(amount) || amount <= 0) return showToast("Cantidad inválida.");
+    try {
+      setSaving(true);
+      const { data } = await replenishInventory(modal.row.id, amount);
+      setItems((xs) => xs.map((it) => (it.id === data.id ? data : it)));
+      showToast("Reabastecido.");
+      closeModal();
+    } catch {
+      showToast("No se pudo reabastecer.");
+    } finally {
+      setSaving(false);
     }
-  };
+  }
 
-  const handleDelete = (id) => {
-    if (window.confirm("¿Desea eliminar este producto del inventario?")) {
-      setProducts(products.filter(p => p.id !== id));
+  async function submitUpd(e) {
+    e.preventDefault();
+    const payload = {};
+    if (formUpd.name.trim() !== "") payload.name = formUpd.name.trim();
+    if (formUpd.stock !== "") {
+      const stock = Number(formUpd.stock);
+      if (!Number.isFinite(stock) || stock < 0) return showToast("Stock inválido.");
+      payload.stock = stock;
     }
-  };
+    if (formUpd.price !== "") {
+      const price = Number(formUpd.price);
+      if (!Number.isFinite(price) || price < 0) return showToast("Precio inválido.");
+      payload.price = price;
+    }
+    try {
+      setSaving(true);
+      const { data } = await updateInventory(modal.row.id, payload);
+      setItems((xs) => xs.map((it) => (it.id === data.id ? data : it)));
+      showToast("Actualizado.");
+      closeModal();
+    } catch {
+      showToast("No se pudo actualizar.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
-  const getRowColor = (stock) => {
-    if (stock <= 20) return "#f8d7da"; // rojo
-    if (stock <= 100) return "#fff3cd"; // amarillo
-    return "#d4edda"; // verde
-  };
+  async function submitDel(e) {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      await removeInventory(modal.row.id);
+      setItems((xs) => xs.filter((it) => it.id !== modal.row.id));
+      const { data: add } = await getAddable();
+      setAddable(add);
+      showToast("Eliminado.");
+      closeModal();
+    } catch {
+      showToast("No se pudo eliminar.");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <div style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
-      <h1>Inventario</h1>
-
-      <div style={{ marginBottom: 20, display: "flex", gap: 10, flexWrap: "wrap" }}>
-        <input
-          type="text"
-          placeholder="Buscar por nombre..."
-          value={filters.search}
-          onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          style={{ padding: 6, flex: 1 }}
-        />
-        <select
-          value={filters.type}
-          onChange={(e) => setFilters({ ...filters, type: e.target.value })}
-          style={{ padding: 6 }}
-        >
-          <option value="">Todos los tipos</option>
-          <option value="Pizza">Pizza</option>
-          <option value="Postre">Postre</option>
-          <option value="Bebida">Bebida</option>
-        </select>
+    <main className={`${styles.container} pz-container`}>
+      <div className={styles.header}>
+        <h2>Inventario</h2>
+        {toast && <div className={styles.toast}>{toast}</div>}
       </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ background: "#f0f0f0" }}>
-            <th style={{ border: "1px solid #ccc", padding: 8 }}>ID</th>
-            <th style={{ border: "1px solid #ccc", padding: 8 }}>Nombre</th>
-            <th style={{ border: "1px solid #ccc", padding: 8 }}>Tipo</th>
-            <th
-              style={{ border: "1px solid #ccc", padding: 8, cursor: "pointer" }}
-              onClick={() => handleSort("stock")}
-            >
-              Cantidad {sortConfig.key === "stock" ? (sortConfig.direction === "asc" ? "⬆" : "⬇") : ""}
-            </th>
-            <th
-              style={{ border: "1px solid #ccc", padding: 8, cursor: "pointer" }}
-              onClick={() => handleSort("price")}
-            >
-              Precio Unitario {sortConfig.key === "price" ? (sortConfig.direction === "asc" ? "⬆" : "⬇") : ""}
-            </th>
-            <th style={{ border: "1px solid #ccc", padding: 8 }}>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedProducts.map(product => (
-            <tr key={product.id} style={{ backgroundColor: getRowColor(product.stock) }}>
-              <td style={{ border: "1px solid #ccc", padding: 8 }}>{product.id}</td>
-              <td style={{ border: "1px solid #ccc", padding: 8 }}>{product.name}</td>
-              <td style={{ border: "1px solid #ccc", padding: 8 }}>{product.type}</td>
-              <td style={{ border: "1px solid #ccc", padding: 8, fontWeight: 600 }}>{product.stock}</td>
-              <td style={{ border: "1px solid #ccc", padding: 8 }}>{product.price} Q</td>
-              <td style={{ border: "1px solid #ccc", padding: 8, display: "flex", gap: 6 }}>
-                <button onClick={() => handleReplenish(product.id)} style={{ padding: "4px 8px" }}>Reabastecer</button>
-                <button onClick={() => handleUpdate(product.id)} style={{ padding: "4px 8px" }}>Actualizar</button>
-                <button onClick={() => handleDelete(product.id)} style={{ padding: "4px 8px", backgroundColor: "#dc3545", color: "#fff" }}>Eliminar</button>
-              </td>
-            </tr>
-          ))}
-          {sortedProducts.length === 0 && (
+      <div className={styles.toolbar}>
+        <input
+          className={styles.input}
+          placeholder="Buscar por nombre…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <select className={styles.input} value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="">Todos los tipos</option>
+          <option value="pizza">pizza</option>
+          <option value="postre">postre</option>
+          <option value="bebida">bebida</option>
+        </select>
+        <button className={styles.primary} onClick={openAdd} disabled={!addable.length}>
+          Agregar producto
+        </button>
+      </div>
+
+      <div className={styles.card}>
+        <table className={styles.table}>
+          <thead>
             <tr>
-              <td colSpan={6} style={{ padding: 10, textAlign: "center" }}>No hay productos</td>
+              <th className={styles.thId}>ID</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Cantidad</th>
+              <th>Precio Unitario</th>
+              <th className={styles.thActions}>Acciones</th>
             </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr><td colSpan={6} className={styles.empty}>Cargando…</td></tr>
+            )}
+            {!loading && filtered.map((r) => (
+              <tr key={r.id}>
+                <td className={styles.mono}>{r.id}</td>
+                <td>{r.name}</td>
+                <td><span className={`${styles.badge} ${styles[`type-${r.type}`]}`}>{r.type}</span></td>
+                <td className={styles.bold}>{r.stock}</td>
+                <td>Q {Number(r.price ?? 0).toFixed(2)}</td>
+                <td>
+                  <div className={styles.rowActions}>
+                    <button className={styles.btn} onClick={() => openRepl(r)}>Reabastecer</button>
+                    <button className={styles.btn} onClick={() => openUpd(r)}>Actualizar</button>
+                    <button className={styles.danger} onClick={() => openDel(r)}>Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!loading && filtered.length === 0 && (
+              <tr><td colSpan={6} className={styles.empty}>No hay productos</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Modal open={modal.open && modal.kind === "add"} title="Agregar producto" onClose={closeModal}>
+        <form className={styles.form} onSubmit={submitAdd}>
+          <label>
+            Producto
+            <select
+              className={styles.input}
+              value={formAdd.id_menu_item}
+              onChange={(e) => setFormAdd((f) => ({ ...f, id_menu_item: e.target.value }))}
+              required
+            >
+              {addable.map((m) => (
+                <option key={m.id_menu_item} value={m.id_menu_item}>
+                  {m.name} — {m.category} (Q {Number(m.price).toFixed(2)})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className={styles.grid2}>
+            <label>
+              Stock inicial
+              <input
+                className={styles.input}
+                value={formAdd.stock}
+                onChange={(e) => setFormAdd((f) => ({ ...f, stock: e.target.value.replace(/\D/g,"") }))}
+                inputMode="numeric"
+                required
+              />
+            </label>
+            <label>
+              Precio inventario (opcional)
+              <input
+                className={styles.input}
+                value={formAdd.price}
+                onChange={(e) => setFormAdd((f) => ({ ...f, price: e.target.value }))}
+                placeholder="Usar precio del menú"
+                inputMode="decimal"
+              />
+            </label>
+          </div>
+          <div className={styles.modalActions}>
+            <button type="button" className={styles.ghost} onClick={closeModal}>Cancelar</button>
+            <button className={styles.primary} disabled={saving}>Agregar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={modal.open && modal.kind === "repl"} title={`Reabastecer: ${modal.row?.name || ""}`} onClose={closeModal}>
+        <form className={styles.form} onSubmit={submitRepl}>
+          <label>
+            Cantidad a reabastecer
+            <input
+              className={styles.input}
+              value={formRepl.amount}
+              onChange={(e) => setFormRepl({ amount: e.target.value.replace(/\D/g,"") })}
+              inputMode="numeric"
+              required
+            />
+          </label>
+          <div className={styles.modalActions}>
+            <button type="button" className={styles.ghost} onClick={closeModal}>Cancelar</button>
+            <button className={styles.primary} disabled={saving}>Reabastecer</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={modal.open && modal.kind === "upd"} title={`Actualizar: ${modal.row?.name || ""}`} onClose={closeModal}>
+        <form className={styles.form} onSubmit={submitUpd}>
+          <label>
+            Nombre
+            <input
+              className={styles.input}
+              value={formUpd.name}
+              onChange={(e) => setFormUpd((f) => ({ ...f, name: e.target.value }))}
+              placeholder="Nuevo nombre"
+            />
+          </label>
+          <div className={styles.grid2}>
+            <label>
+              Stock
+              <input
+                className={styles.input}
+                value={formUpd.stock}
+                onChange={(e) => setFormUpd((f) => ({ ...f, stock: e.target.value.replace(/\D/g,"") }))}
+                inputMode="numeric"
+                required
+              />
+            </label>
+            <label>
+              Precio inventario (vacío = mantener)
+              <input
+                className={styles.input}
+                value={formUpd.price}
+                onChange={(e) => setFormUpd((f) => ({ ...f, price: e.target.value }))}
+                inputMode="decimal"
+                placeholder="Q..."
+              />
+            </label>
+          </div>
+          <div className={styles.modalActions}>
+            <button type="button" className={styles.ghost} onClick={closeModal}>Cancelar</button>
+            <button className={styles.primary} disabled={saving}>Guardar</button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={modal.open && modal.kind === "del"} title="Eliminar producto" onClose={closeModal}>
+        <p>¿Seguro que deseas eliminar <strong>{modal.row?.name}</strong> del inventario?</p>
+        <div className={styles.modalActions}>
+          <button type="button" className={styles.ghost} onClick={closeModal}>Cancelar</button>
+          <button className={styles.danger} onClick={submitDel} disabled={saving}>Eliminar</button>
+        </div>
+      </Modal>
+    </main>
   );
 }
