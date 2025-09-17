@@ -25,9 +25,11 @@ import History from "./pages/History";
 import Inventory from "./pages/Inventory.jsx";
 import GoogleAuth from "./pages/OAuth/GoogleAuth";
 import MesasDashboard from "./pages/Mesas";
-
 import POSPage from "./pages/POS";
-import OrdersOpsBoard from "./pages/Ops/Orders";
+import OrdersOpsBoard from "./pages/ops/Orders";
+
+// 👇 NUEVO: dashboard del repartidor
+import CourierDashboard from "./pages/Courier";
 
 import RequireAdmin from "./components/RequireAdmin";
 import RequireClient from "./components/RequireClient";
@@ -146,6 +148,16 @@ export default function App() {
                   element={
                     <RequireRole roles={["mesero", "cocinero", "repartidor"]}>
                       <OrdersOpsBoard />
+                    </RequireRole>
+                  }
+                />
+
+                {/* 👇 NUEVO: Repartos solo para repartidores */}
+                <Route
+                  path="/repartos"
+                  element={
+                    <RequireRole roles={["repartidor"]}>
+                      <CourierDashboard />
                     </RequireRole>
                   }
                 />

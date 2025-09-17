@@ -1,5 +1,4 @@
 import { sequelize } from "../config/database.js";
-import "dotenv/config";
 
 import { User } from "./user.js";
 import { MenuItem } from "./menuItem.js";
@@ -12,13 +11,21 @@ import { Telefono } from "./telefono.js";
 import { Order } from "./order.js";
 import { OrderItem } from "./orderItem.js";
 import { Mesa } from "./mesa.js";
-import { InventoryItem } from "./inventoryItem.js"; 
+import { InventoryItem } from "./inventoryItem.js";
+
+// Nuevos modelos OPS / Repartidores
+import { OpsOrder } from "./opsorder.js";
+import { OpsOrderItem } from "./opsorderItem.js";
+import { CourierState } from "./courierState.js";
 
 function linkOnce(model, assocName, fn) {
-  const already = model.associations && Object.prototype.hasOwnProperty.call(model.associations, assocName);
+  const already =
+    model.associations &&
+    Object.prototype.hasOwnProperty.call(model.associations, assocName);
   if (!already) fn();
 }
 
+/* Cliente, direcciones, teléfonos */
 linkOnce(Cliente, "direcciones", () => {
   Cliente.hasMany(Direccion, { foreignKey: "id_cliente", as: "direcciones" });
 });
@@ -33,6 +40,7 @@ linkOnce(Telefono, "cliente", () => {
   Telefono.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
 });
 
+/* Orders “normales” (checkout) */
 linkOnce(Cliente, "orders", () => {
   Cliente.hasMany(Order, { foreignKey: "id_cliente", as: "orders" });
 });
@@ -54,11 +62,53 @@ linkOnce(MenuItem, "orderItems", () => {
   MenuItem.hasMany(OrderItem, { foreignKey: "id_menu_item", as: "orderItems" });
 });
 
+/* Inventario ↔ Menú */
 linkOnce(MenuItem, "stock", () => {
   MenuItem.hasOne(InventoryItem, { foreignKey: "id_menu_item", as: "stock" });
 });
 linkOnce(InventoryItem, "menuItem", () => {
   InventoryItem.belongsTo(MenuItem, { foreignKey: "id_menu_item", as: "menuItem" });
+});
+
+/* OPS Orders (tablero OPS) */
+linkOnce(OpsOrder, "items", () => {
+  OpsOrder.hasMany(OpsOrderItem, {
+    foreignKey: "id_ops_order",
+    as: "items",
+  });
+});
+linkOnce(OpsOrderItem, "opsOrder", () => {
+  OpsOrderItem.belongsTo(OpsOrder, {
+    foreignKey: "id_ops_order",
+    as: "opsOrder",
+  });
+});
+linkOnce(OpsOrderItem, "menuItem", () => {
+  OpsOrderItem.belongsTo(MenuItem, {
+    foreignKey: "id_menu_item",
+    as: "menuItem",
+  });
+});
+
+/* Repartidores (estado y asignaciones) */
+linkOnce(User, "courierState", () => {
+  User.hasOne(CourierState, { foreignKey: "user_id", as: "courierState" });
+});
+linkOnce(CourierState, "user", () => {
+  CourierState.belongsTo(User, { foreignKey: "user_id", as: "user" });
+});
+
+linkOnce(User, "assignedOpsOrders", () => {
+  User.hasMany(OpsOrder, {
+    foreignKey: "courier_user_id",
+    as: "assignedOpsOrders",
+  });
+});
+linkOnce(OpsOrder, "courierUser", () => {
+  OpsOrder.belongsTo(User, {
+    foreignKey: "courier_user_id",
+    as: "courierUser",
+  });
 });
 
 export {
@@ -74,5 +124,8 @@ export {
   Order,
   OrderItem,
   Mesa,
-  InventoryItem, 
+  InventoryItem,
+  OpsOrder,
+  OpsOrderItem,
+  CourierState,
 };

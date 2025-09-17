@@ -12,7 +12,7 @@ function readTokenPayload() {
     const json = decodeURIComponent(
       atob(base64)
         .split("")
-        .map(c => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
         .join("")
     );
     return JSON.parse(json);
@@ -23,7 +23,8 @@ function readTokenPayload() {
 
 function canonicalRole(user) {
   const base = String(user?.role || "").toLowerCase();
-  if (["admin", "cliente", "mesero", "cocinero", "repartidor"].includes(base)) return base;
+  if (["admin", "cliente", "mesero", "cocinero", "repartidor"].includes(base))
+    return base;
 
   const hinted = String(user?.employee_role || "").toLowerCase();
   if (["mesero", "cocinero", "repartidor"].includes(hinted)) return hinted;
@@ -60,55 +61,120 @@ export default function Navbar() {
         </Link>
 
         <nav className="pz-nav">
-          <Link to="/" className={linkCls("/")}>Menú</Link>
-          <Link to="/reservar" className={linkCls("/reservar")}>Reservar</Link>
-          {user && <Link to="/mis-reservas" className={linkCls("/mis-reservas")}>Mis reservas</Link>}
+          <Link to="/" className={linkCls("/")}>
+            Menú
+          </Link>
+          <Link to="/reservar" className={linkCls("/reservar")}>
+            Reservar
+          </Link>
+          {user && (
+            <Link to="/mis-reservas" className={linkCls("/mis-reservas")}>
+              Mis reservas
+            </Link>
+          )}
 
           {role === "admin" && (
             <>
-              <Link to="/empleados" className={linkCls("/empleados")}>Empleados</Link>
-              <Link to="/admin/employees/new" className={linkCls("/admin/employees/new")}>➕ Agregar empleado</Link>
-              <Link to="/orders" className={linkCls("/orders")}>Órdenes</Link>
-              <Link to="/delivery" className={linkCls("/delivery")}>Delivery</Link>
-              <Link to="/inventory" className={linkCls("/inventory")}>Inventario</Link>
-              <Link to="/mesas" className={linkCls("/mesas")}>Mesas</Link>
-              <Link to="/ops/pos" className={linkCls("/ops/pos")}>POS</Link>
-              <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>Ops</Link>
+              <Link to="/empleados" className={linkCls("/empleados")}>
+                Empleados
+              </Link>
+              <Link
+                to="/admin/employees/new"
+                className={linkCls("/admin/employees/new")}
+              >
+                ➕ Agregar empleado
+              </Link>
+              <Link to="/orders" className={linkCls("/orders")}>
+                Órdenes
+              </Link>
+              <Link to="/delivery" className={linkCls("/delivery")}>
+                Delivery
+              </Link>
+              <Link to="/inventory" className={linkCls("/inventory")}>
+                Inventario
+              </Link>
+              <Link to="/mesas" className={linkCls("/mesas")}>
+                Mesas
+              </Link>
+              <Link to="/ops/pos" className={linkCls("/ops/pos")}>
+                POS
+              </Link>
+              <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
+                Ops
+              </Link>
             </>
           )}
 
           {role === "mesero" && (
             <>
-              <Link to="/mesas" className={linkCls("/mesas")}>Mesas</Link>
-              <Link to="/ops/pos" className={linkCls("/ops/pos")}>POS</Link>
-              <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>Pedidos</Link>
+              <Link to="/mesas" className={linkCls("/mesas")}>
+                Mesas
+              </Link>
+              <Link to="/ops/pos" className={linkCls("/ops/pos")}>
+                POS
+              </Link>
+              <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
+                Pedidos
+              </Link>
             </>
           )}
 
           {role === "cocinero" && (
-            <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>Pedidos</Link>
+            <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
+              Pedidos
+            </Link>
           )}
 
           {role === "repartidor" && (
-            <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>Pedidos</Link>
+            <>
+              <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
+                Pedidos
+              </Link>
+              {/* 👇 nuevo enlace visible SOLO repartidor */}
+              <Link to="/repartos" className={linkCls("/repartos")}>
+                Repartos
+              </Link>
+            </>
           )}
         </nav>
 
         <div className="pz-actions">
-          <button className="pz-btn pz-btn-ghost" onClick={handleCartClick} aria-label="Abrir carrito" type="button">
-            🛒{user && count > 0 && <span style={{ marginLeft: 6, fontWeight: 700 }}>{count}</span>}
+          <button
+            className="pz-btn pz-btn-ghost"
+            onClick={handleCartClick}
+            aria-label="Abrir carrito"
+            type="button"
+          >
+            🛒
+            {user && count > 0 && (
+              <span style={{ marginLeft: 6, fontWeight: 700 }}>{count}</span>
+            )}
           </button>
 
           {role === "cliente" && (
-            <Link to="/perfil" className={linkCls("/perfil").replace("pz-link", "pz-btn pz-btn-outline")}>Perfil</Link>
+            <Link
+              to="/perfil"
+              className={linkCls("/perfil").replace(
+                "pz-link",
+                "pz-btn pz-btn-outline"
+              )}
+            >
+              Perfil
+            </Link>
           )}
 
           {!user ? (
-            <Link to="/login" className="pz-btn pz-btn-outline">Iniciar sesión</Link>
+            <Link to="/login" className="pz-btn pz-btn-outline">
+              Iniciar sesión
+            </Link>
           ) : (
             <>
-              <span className="pz-user"><span className="pz-user-name">Hola, {user.name}</span></span>
-              <Link to="/logout" className="pz-btn pz-btn-primary">Salir</Link>
+              <span className="pz-user">
+                <span className="pz-user-name">Hola, {user.name}</span>
+              </span>
+              <Link to="/logout" className="pz-btn pz-btn-primary">
+                Salir
+              </Link>
             </>
           )}
         </div>

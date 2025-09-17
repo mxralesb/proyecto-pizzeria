@@ -6,6 +6,7 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/authContext";
 import { createOrder } from "../api/orders";
 import { getMe, listDirecciones, listTelefonos } from "../api/clientes";
+import { createOpsOrder } from "../api/opsOrders";
 
 const NEW_VALUE = "__new__";
 
@@ -19,7 +20,11 @@ export default function CheckoutPage() {
     : JSON.parse(localStorage.getItem("pz-cart") || "[]");
 
   const subtotal = useMemo(
-    () => items.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0),
+    () =>
+      items.reduce(
+        (acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1),
+        0
+      ),
     [items]
   );
   const tax = +(subtotal * 0.12).toFixed(2);
@@ -51,7 +56,11 @@ export default function CheckoutPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [meRes, telRes, dirRes] = await Promise.all([getMe(), listTelefonos(), listDirecciones()]);
+        const [meRes, telRes, dirRes] = await Promise.all([
+          getMe(),
+          listTelefonos(),
+          listDirecciones(),
+        ]);
         const telList = Array.isArray(telRes?.data) ? telRes.data : [];
         const dirList = Array.isArray(dirRes?.data) ? dirRes.data : [];
 
@@ -74,28 +83,41 @@ export default function CheckoutPage() {
         }
 
         if (meRes?.data?.nombre || meRes?.data?.apellido) {
-          const nm = `${meRes.data.nombre || ""} ${meRes.data.apellido || ""}`.trim();
+          const nm = `${meRes.data.nombre || ""} ${
+            meRes.data.apellido || ""
+          }`.trim();
           setForm((f) => ({ ...f, name: nm || f.name }));
         }
         if (meRes?.data?.correo_electronico) {
           setForm((f) => ({ ...f, email: meRes.data.correo_electronico }));
         }
-      } catch {
-      }
+      } catch {}
     };
     load();
   }, []);
 
   useEffect(() => {
     if (form.payment === "efectivo") {
-      setForm((f) => ({ ...f, cardName: "", cardNumber: "", cardExp: "", cardCvv: "" }));
+      setForm((f) => ({
+        ...f,
+        cardName: "",
+        cardNumber: "",
+        cardExp: "",
+        cardCvv: "",
+      }));
     }
   }, [form.payment]);
 
   const onChange = (e) => {
     let { name, value } = e.target;
-    if (name === "cardNumber") value = value.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-    if (name === "cardName") value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").toUpperCase();
+    if (name === "cardNumber")
+      value = value
+        .replace(/\D/g, "")
+        .slice(0, 16)
+        .replace(/(.{4})/g, "$1 ")
+        .trim();
+    if (name === "cardName")
+      value = value.replace(/[^A-Za-zÀ-ÿ\s]/g, "").toUpperCase();
     if (name === "cardExp") {
       value = value.replace(/\D/g, "").slice(0, 4);
       if (value.length >= 3) value = value.slice(0, 2) + "/" + value.slice(2);
@@ -112,7 +134,9 @@ export default function CheckoutPage() {
 
   const generateInvoicePDF = (order) => {
     const doc = new jsPDF();
-    const dateStr = dayjs(order?.createdAt || new Date()).format("DD/MM/YYYY HH:mm");
+    const dateStr = dayjs(order?.createdAt || new Date()).format(
+      "DD/MM/YYYY HH:mm"
+    );
 
     doc.setFontSize(18);
     doc.text("PIZZAS - FACTURA", 14, 18);
@@ -182,6 +206,13 @@ export default function CheckoutPage() {
     doc.save(`Factura_${order?.id_order ?? Date.now()}.pdf`);
   };
 
+  const describeCart = () =>
+    items.length === 0
+      ? ""
+      : items
+          .map((c) => `${c.qty || 1}x ${c.name || c.title || `Item ${c.id}`}`)
+          .join(", ");
+
   const submit = async (e) => {
     e.preventDefault();
     if (!items.length) return;
@@ -192,14 +223,26 @@ export default function CheckoutPage() {
       const cardExpRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
       const cardCvvRegex = /^\d{3,4}$/;
 
-      if (!cardNameRegex.test(form.cardName)) return alert("El nombre de la tarjeta solo puede contener letras y espacios.");
-      if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, ""))) return alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
-      if (!cardExpRegex.test(form.cardExp)) return alert("Fecha de expiración inválida. Usa formato MM/AA.");
+      if (!cardNameRegex.test(form.cardName))
+        return alert(
+          "El nombre de la tarjeta solo puede contener letras y espacios."
+        );
+      if (!cardNumberRegex.test(form.cardNumber.replace(/\s+/g, "")))
+        return alert("Número de tarjeta inválido. Debe tener 16 dígitos.");
+      if (!cardExpRegex.test(form.cardExp))
+        return alert("Fecha de expiración inválida. Usa formato MM/AA.");
       const [mm, yy] = form.cardExp.split("/").map((v) => parseInt(v, 10));
       const currentYear = new Date().getFullYear() % 100;
       const currentMonth = new Date().getMonth() + 1;
-      if (mm < 1 || mm > 12 || yy < currentYear || (yy === currentYear && mm < currentMonth)) return alert("La tarjeta ya expiró.");
-      if (!cardCvvRegex.test(form.cardCvv)) return alert("CVV inválido. Debe tener 3 o 4 dígitos.");
+      if (
+        mm < 1 ||
+        mm > 12 ||
+        yy < currentYear ||
+        (yy === currentYear && mm < currentMonth)
+      )
+        return alert("La tarjeta ya expiró.");
+      if (!cardCvvRegex.test(form.cardCvv))
+        return alert("CVV inválido. Debe tener 3 o 4 dígitos.");
     }
 
     setLoading(true);
@@ -226,6 +269,32 @@ export default function CheckoutPage() {
       };
 
       const { data: order } = await createOrder(payload);
+
+      try {
+        const opsPayload = {
+          source: "Cliente Online",
+          details_text: `Cliente Online | ${describeCart()}`,
+          items: items.map((it) => ({
+            id_menu_item: it.id,
+            qty: Number(it.qty || 1),
+            unit_price: Number(it.price || 0),
+          })),
+          customer_name: form.name,
+          customer_phone: form.phone,
+          customer_address: [form.address, form.city]
+            .filter(Boolean)
+            .join(", "),
+          payment_method: form.payment,
+          change_due: form.payment === "efectivo" ? 0 : null,
+        };
+        await createOpsOrder(opsPayload);
+      } catch (e2) {
+        console.warn(
+          "No se pudo crear la orden OPS:",
+          e2?.response?.data || e2?.message
+        );
+      }
+
       generateInvoicePDF(order);
       clearCartEverywhere();
       navigate("/historial", { replace: true });
@@ -268,18 +337,38 @@ export default function CheckoutPage() {
       {!items.length ? (
         <p>Tu carrito está vacío.</p>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 18, alignItems: "start" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1.2fr 1fr",
+            gap: 18,
+            alignItems: "start",
+          }}
+        >
           <form className="pz-form" onSubmit={submit}>
             <h3>Datos del cliente</h3>
 
             <label>
               Nombre completo
-              <input className="pz-input" name="name" value={form.name} onChange={onChange} required />
+              <input
+                className="pz-input"
+                name="name"
+                value={form.name}
+                onChange={onChange}
+                required
+              />
             </label>
 
             <label>
               Correo
-              <input className="pz-input" type="email" name="email" value={form.email} onChange={onChange} required />
+              <input
+                className="pz-input"
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={onChange}
+                required
+              />
             </label>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -346,11 +435,23 @@ export default function CheckoutPage() {
             <h3>Método de pago</h3>
             <div style={{ display: "flex", gap: 10 }}>
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input type="radio" name="payment" value="tarjeta" checked={form.payment === "tarjeta"} onChange={onChange} />
+                <input
+                  type="radio"
+                  name="payment"
+                  value="tarjeta"
+                  checked={form.payment === "tarjeta"}
+                  onChange={onChange}
+                />
                 Tarjeta
               </label>
               <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <input type="radio" name="payment" value="efectivo" checked={form.payment === "efectivo"} onChange={onChange} />
+                <input
+                  type="radio"
+                  name="payment"
+                  value="efectivo"
+                  checked={form.payment === "efectivo"}
+                  onChange={onChange}
+                />
                 Efectivo al recibir
               </label>
             </div>
@@ -360,20 +461,52 @@ export default function CheckoutPage() {
                 <h4 style={{ margin: 0, marginBottom: 10 }}>Datos de tarjeta</h4>
                 <label>
                   Nombre en la tarjeta
-                  <input className="pz-input" name="cardName" value={form.cardName} onChange={onChange} required autoComplete="cc-name" />
+                  <input
+                    className="pz-input"
+                    name="cardName"
+                    value={form.cardName}
+                    onChange={onChange}
+                    required
+                    autoComplete="cc-name"
+                  />
                 </label>
                 <label>
                   Número de tarjeta
-                  <input className="pz-input" name="cardNumber" inputMode="numeric" value={form.cardNumber} onChange={onChange} placeholder="4111 1111 1111 1111" required autoComplete="cc-number" />
+                  <input
+                    className="pz-input"
+                    name="cardNumber"
+                    inputMode="numeric"
+                    value={form.cardNumber}
+                    onChange={onChange}
+                    placeholder="4111 1111 1111 1111"
+                    required
+                    autoComplete="cc-number"
+                  />
                 </label>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                   <label>
                     Expiración (MM/AA)
-                    <input className="pz-input" name="cardExp" placeholder="MM/AA" value={form.cardExp} onChange={onChange} required autoComplete="cc-exp" />
+                    <input
+                      className="pz-input"
+                      name="cardExp"
+                      placeholder="MM/AA"
+                      value={form.cardExp}
+                      onChange={onChange}
+                      required
+                      autoComplete="cc-exp"
+                    />
                   </label>
                   <label>
                     CVV
-                    <input className="pz-input" name="cardCvv" inputMode="numeric" value={form.cardCvv} onChange={onChange} required autoComplete="cc-csc" />
+                    <input
+                      className="pz-input"
+                      name="cardCvv"
+                      inputMode="numeric"
+                      value={form.cardCvv}
+                      onChange={onChange}
+                      required
+                      autoComplete="cc-csc"
+                    />
                   </label>
                 </div>
               </div>
@@ -391,8 +524,12 @@ export default function CheckoutPage() {
             <ul className="pz-list" style={{ marginBottom: 10 }}>
               {items.map((it) => (
                 <li key={it.id} style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>{(it.name || it.title) ?? `Item ${it.id}`} × {it.qty || 1}</span>
-                  <strong>Q {((Number(it.price) || 0) * (Number(it.qty) || 1)).toFixed(2)}</strong>
+                  <span>
+                    {(it.name || it.title) ?? `Item ${it.id}`} × {it.qty || 1}
+                  </span>
+                  <strong>
+                    Q {((Number(it.price) || 0) * (Number(it.qty) || 1)).toFixed(2)}
+                  </strong>
                 </li>
               ))}
             </ul>
@@ -405,7 +542,14 @@ export default function CheckoutPage() {
                 <span>IVA (12%)</span>
                 <span>Q {tax.toFixed(2)}</span>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, marginTop: 6 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontWeight: 700,
+                  marginTop: 6,
+                }}
+              >
                 <span>Total</span>
                 <span>Q {total.toFixed(2)}</span>
               </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/client";
 import styles from "./POS.module.css";
 
@@ -9,6 +9,14 @@ export default function POSPage() {
   const [mesaId, setMesaId] = useState("");
   const [cart, setCart] = useState([]);
   const [notes, setNotes] = useState("");
+
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const notify = (type, message) => {
+    setToast({ type, message });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3200);
+  };
 
   useEffect(() => {
     const run = async () => {
@@ -68,28 +76,63 @@ export default function POSPage() {
     return { subtotal, tax, total };
   }, [cart]);
 
+  const describeCart = () =>
+    cart.length === 0 ? "" : cart.map((c) => `${c.qty}x ${c.name}`).join(", ");
+
   const sendOrder = async () => {
     if (!mesaId) {
-      alert("Selecciona una mesa ocupada");
+      notify("warning", "Selecciona una mesa ocupada");
       return;
     }
     if (cart.length === 0) {
-      alert("No hay productos");
+      notify("warning", "No hay productos");
       return;
     }
     try {
       setLoading(true);
-      const payload = {
+
+      const mesaName =
+        tables.find((t) => String(t.id) === String(mesaId))?.name || mesaId;
+
+      // ingredientes a partir de los productos del carrito
+      const ingredientsText = Array.from(
+        new Set(
+          cart
+            .map((c) => {
+              const mi = menu.find((m) => m.id === c.id);
+              return mi?.ingredients || mi?.ingredientes || mi?.description;
+            })
+            .filter(Boolean)
+            .map((s) => String(s).trim())
+        )
+      ).join(" | ");
+
+      const payloadOps = {
+        source: "Mesa de restaurante",
+        details_text: `Mesa ${mesaName} | ${describeCart()}${
+          notes ? ` | Notas: ${notes}` : ""
+        }`,
+        ingredients_text: ingredientsText || null,
+        items: cart.map((c) => ({
+          id_menu_item: c.id,
+          qty: c.qty,
+          unit_price: c.price,
+        })),
         mesa_id: Number(mesaId),
-        items: cart.map((c) => ({ id: c.id, qty: c.qty, price: c.price })),
         notes,
       };
-      const { data } = await api.post("/ops/orders", payload);
+
+      const { data } = await api.post("/ops/orders", payloadOps);
+
       clear();
       setNotes("");
-      alert(`Orden #${data.id} creada`);
-    } catch {
-      alert("No se pudo crear la orden");
+      notify("success", `Orden enviada a cocina: ${data.order_number}`);
+    } catch (err) {
+      const msg =
+        err?.response?.data?.error ||
+        err?.message ||
+        "No se pudo crear la orden";
+      notify("error", msg);
     } finally {
       setLoading(false);
     }
@@ -97,6 +140,26 @@ export default function POSPage() {
 
   return (
     <div className={`pz-container ${styles.wrap}`}>
+      {toast && (
+        <div className={styles.toastWrap}>
+          <div className={`${styles.toast} ${styles[toast.type || "info"]}`}>
+            <span className={styles.toastIcon}>
+              {toast.type === "success"
+                ? "✅"
+                : toast.type === "error"
+                ? "❌"
+                : toast.type === "warning"
+                ? "⚠️"
+                : "ℹ️"}
+            </span>
+            <span className={styles.toastMsg}>{toast.message}</span>
+            <button className={styles.toastClose} onClick={() => setToast(null)}>
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <h2 className="pz-title">POS</h2>
 
       <div className={styles.headerRow}>
@@ -114,7 +177,11 @@ export default function POSPage() {
             </option>
           ))}
         </select>
-        <button className="pz-btn pz-btn-ghost" onClick={clear} disabled={cart.length === 0 || loading}>
+        <button
+          className="pz-btn pz-btn-ghost"
+          onClick={clear}
+          disabled={cart.length === 0 || loading}
+        >
           Vaciar
         </button>
       </div>
@@ -130,9 +197,15 @@ export default function POSPage() {
                 <div key={it.id} className={styles.item}>
                   <div className={styles.itemInfo}>
                     <div className={styles.itemName}>{it.nombre || it.name}</div>
-                    <div className={styles.itemPrice}>Q{Number(it.precio ?? it.price ?? 0).toFixed(2)}</div>
+                    <div className={styles.itemPrice}>
+                      Q{Number(it.precio ?? it.price ?? 0).toFixed(2)}
+                    </div>
                   </div>
-                  <button className={styles.btnAdd} onClick={() => add(it)} disabled={loading}>
+                  <button
+                    className={styles.btnAdd}
+                    onClick={() => add(it)}
+                    disabled={loading}
+                  >
                     Agregar
                   </button>
                 </div>
@@ -163,13 +236,19 @@ export default function POSPage() {
                     <td>{c.name}</td>
                     <td>
                       <div className={styles.qtyRow}>
-                        <button className={styles.btnTiny} onClick={() => dec(c.id)} disabled={loading}>
+                        <button
+                          className={styles.btnTiny}
+                          onClick={() => dec(c.id)}
+                          disabled={loading}
+                        >
                           −
                         </button>
                         <span>{c.qty}</span>
                         <button
                           className={styles.btnTiny}
-                          onClick={() => add({ id: c.id, nombre: c.name, precio: c.price })}
+                          onClick={() =>
+                            add({ id: c.id, nombre: c.name, precio: c.price })
+                          }
                           disabled={loading}
                         >
                           +

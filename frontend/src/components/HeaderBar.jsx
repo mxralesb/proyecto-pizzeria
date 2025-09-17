@@ -8,9 +8,14 @@ export default function HeaderBar() {
   const { pathname } = useLocation();
   const { user } = useAuth();
 
-  const role = String(user?.role ?? user?.payload?.role ?? user?.data?.role ?? "").toLowerCase();
+  const role = String(
+    user?.role ?? user?.payload?.role ?? user?.data?.role ?? ""
+  ).toLowerCase();
   const empRole = String(
-    user?.employee_role ?? user?.payload?.employee_role ?? user?.data?.employee_role ?? ""
+    user?.employee_role ??
+      user?.payload?.employee_role ??
+      user?.data?.employee_role ??
+      ""
   ).toLowerCase();
 
   return (
@@ -22,43 +27,126 @@ export default function HeaderBar() {
         </Link>
 
         <nav className={styles.nav}>
-          <Link to="/" className={`${styles.link} ${pathname === "/" ? styles.active : ""}`}>Menú</Link>
-          <Link to="/reservar" className={`${styles.link} ${pathname === "/reservar" ? styles.active : ""}`}>Reservar</Link>
+          <Link
+            to="/"
+            className={`${styles.link} ${pathname === "/" ? styles.active : ""}`}
+          >
+            Menú
+          </Link>
+          <Link
+            to="/reservar"
+            className={`${styles.link} ${
+              pathname === "/reservar" ? styles.active : ""
+            }`}
+          >
+            Reservar
+          </Link>
 
           {user && (
-            <Link to="/mis-reservas" className={`${styles.link} ${pathname === "/mis-reservas" ? styles.active : ""}`}>
+            <Link
+              to="/mis-reservas"
+              className={`${styles.link} ${
+                pathname === "/mis-reservas" ? styles.active : ""
+              }`}
+            >
               Mis reservas
             </Link>
           )}
 
           {(role === "admin" || empRole === "mesero") && (
-            <Link to="/mesas" className={`${styles.link} ${pathname === "/mesas" ? styles.active : ""}`}>Mesas</Link>
+            <Link
+              to="/mesas"
+              className={`${styles.link} ${
+                pathname === "/mesas" ? styles.active : ""
+              }`}
+            >
+              Mesas
+            </Link>
           )}
 
           {role === "admin" && (
             <>
-              <Link to="/empleados" className={`${styles.link} ${pathname === "/empleados" ? styles.active : ""}`}>Empleados</Link>
-              <Link to="/admin/employees/new" className={`${styles.link} ${pathname === "/admin/employees/new" ? styles.active : ""}`}>➕ Agregar</Link>
-              <Link to="/orders" className={`${styles.link} ${pathname === "/orders" ? styles.active : ""}`}>Órdenes</Link>
-              <Link to="/delivery" className={`${styles.link} ${pathname === "/delivery" ? styles.active : ""}`}>Delivery</Link>
-              <Link to="/inventory" className={`${styles.link} ${pathname === "/inventory" ? styles.active : ""}`}>Inventario</Link>
+              <Link
+                to="/empleados"
+                className={`${styles.link} ${
+                  pathname === "/empleados" ? styles.active : ""
+                }`}
+              >
+                Empleados
+              </Link>
+              <Link
+                to="/admin/employees/new"
+                className={`${styles.link} ${
+                  pathname === "/admin/employees/new" ? styles.active : ""
+                }`}
+              >
+                ➕ Agregar
+              </Link>
+              <Link
+                to="/orders"
+                className={`${styles.link} ${
+                  pathname === "/orders" ? styles.active : ""
+                }`}
+              >
+                Órdenes
+              </Link>
+              <Link
+                to="/delivery"
+                className={`${styles.link} ${
+                  pathname === "/delivery" ? styles.active : ""
+                }`}
+              >
+                Delivery
+              </Link>
+              <Link
+                to="/inventory"
+                className={`${styles.link} ${
+                  pathname === "/inventory" ? styles.active : ""
+                }`}
+              >
+                Inventario
+              </Link>
             </>
+          )}
+
+          {/* 👇 SOLO repartidores */}
+          {empRole === "repartidor" && (
+            <Link
+              to="/repartos"
+              className={`${styles.link} ${
+                pathname === "/repartos" ? styles.active : ""
+              }`}
+            >
+              Repartos
+            </Link>
           )}
         </nav>
 
         <div className={styles.actions}>
-          <button className={styles.cartbtn} onClick={() => setOpen(true)} aria-label="Abrir carrito">
+          <button
+            className={styles.cartbtn}
+            onClick={() => setOpen(true)}
+            aria-label="Abrir carrito"
+          >
             🛒{count > 0 && <span className={styles.badge}>{count}</span>}
           </button>
 
-          {role === "cliente" && <Link to="/perfil" className={styles.btnOutline}>Perfil</Link>}
+          {role === "cliente" && (
+            <Link to="/perfil" className={styles.btnOutline}>
+              Perfil
+            </Link>
+          )}
 
           {!user ? (
-            <Link to="/login" className={styles.btnOutline}>Iniciar sesión</Link>
+            <Link to="/login" className={styles.btnOutline}>
+              Iniciar sesión
+            </Link>
           ) : (
             <>
               <span className={styles.user}>Hola, {user.name}</span>
-              <Link to="/logout" className={styles.btnPrimary}>Salir</Link>
+              <Link to="/logout" className={styles.btnPrimary}>
+                Salir
+              </Link>
             </>
           )}
         </div>

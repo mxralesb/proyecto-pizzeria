@@ -22,7 +22,6 @@ export default function Header() {
     navigate("/");
   };
 
-  // Permisos para botones nuevos
   const canSeeMesas = role === "admin" || empRole === "mesero";
   const canSeePOS = role === "admin" || empRole === "mesero";
   const canSeePedidos =
@@ -30,6 +29,8 @@ export default function Header() {
     empRole === "mesero" ||
     empRole === "cocinero" ||
     empRole === "repartidor";
+  // 👇 SOLO repartidor
+  const canSeeRepartos = empRole === "repartidor";
 
   const linkCls = ({ isActive }) => `pz-link ${isActive ? "active" : ""}`;
 
@@ -73,6 +74,12 @@ export default function Header() {
           {canSeePedidos && (
             <NavLink to="/ops/pedidos" className={linkCls}>
               Pedidos
+            </NavLink>
+          )}
+
+          {canSeeRepartos && (
+            <NavLink to="/repartos" className={linkCls}>
+              Repartos
             </NavLink>
           )}
 
