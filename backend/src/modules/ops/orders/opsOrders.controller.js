@@ -119,8 +119,6 @@ export const OpsOrdersController = {
         ).join(" | ");
       }
 
-      const order_number = await nextOrderNumber();
-
       const {
         customer_name = null,
         customer_phone = null,
@@ -130,8 +128,81 @@ export const OpsOrdersController = {
         mesa_id = null,
       } = req.body || {};
 
-      // ✅ Saneamos mesa_id siempre
+      // Saneamos mesa_id
       const mesaIdParsed = parseMesaId(mesa_id);
+
+      // ------------------ ANTI-DUPLICADOS (ventana ~2 min) ------------------
+      const itemsSig = Array.isArray(items) && items.length
+        ? items
+            .map((it) => ({ id: Number(it.id_menu_item), qty: Number(it.qty || 1) }))
+            .filter((x) => x.id && x.qty)
+            .sort((a, b) => (a.id - b.id) || (a.qty - b.qty))
+            .map((x) => `${x.id}:${x.qty}`)
+            .join("|")
+        : "";
+
+      const since = new Date(Date.now() - 2 * 60 * 1000);
+      const candidates = await OpsOrder.findAll({
+        where: {
+          status: "PENDING",
+          source,
+          createdAt: { [Op.gte]: since },
+          ...(mesaIdParsed == null ? { mesa_id: null } : { mesa_id: mesaIdParsed }),
+        },
+        include: [{ model: OpsOrderItem, as: "items" }],
+        order: [["createdAt", "DESC"]],
+      });
+
+      const sameItems = (row) => {
+        const sig = (row.items || [])
+          .map((it) => ({ id: Number(it.id_menu_item), qty: Number(it.qty || 1) }))
+          .filter((x) => x.id && x.qty)
+          .sort((a, b) => (a.id - b.id) || (a.qty - b.qty))
+          .map((x) => `${x.id}:${x.qty}`)
+          .join("|");
+        return sig === itemsSig;
+      };
+
+      let existing = candidates.find(sameItems);
+      if (existing) {
+        let patched = false;
+
+        if (!existing.customer_phone && customer_phone) {
+          existing.customer_phone = customer_phone;
+          patched = true;
+        }
+        if (!existing.customer_address && customer_address) {
+          existing.customer_address = customer_address;
+          patched = true;
+        }
+        if (!existing.customer_name && customer_name) {
+          existing.customer_name = customer_name;
+          patched = true;
+        }
+        if ((!existing.details_text && details_text) || (!existing.ingredients_text && finalIngredients)) {
+          if (!existing.details_text && details_text) existing.details_text = details_text;
+          if (!existing.ingredients_text && finalIngredients) existing.ingredients_text = finalIngredients;
+          patched = true;
+        }
+        if (!existing.payment_method && payment_method) {
+          existing.payment_method = payment_method;
+          patched = true;
+        }
+        if (existing.change_due == null && change_due != null) {
+          existing.change_due = change_due;
+          patched = true;
+        }
+
+        if (patched) await existing.save();
+
+        const withItems = await OpsOrder.findByPk(existing.id_ops_order, {
+          include: [{ model: OpsOrderItem, as: "items", include: [{ model: MenuItem, as: "menuItem" }] }],
+        });
+        return res.status(200).json(withItems);
+      }
+      // ---------------------------------------------------------------------
+
+      const order_number = await nextOrderNumber();
 
       const order = await OpsOrder.create({
         order_number,
@@ -147,7 +218,7 @@ export const OpsOrdersController = {
         courier_user_id: null,
         courier_name: null,
         courier_status: null,
-        mesa_id: mesaIdParsed, // 👈 aquí ya va entero (o null)
+        mesa_id: mesaIdParsed,
       });
 
       if (Array.isArray(items) && items.length) {

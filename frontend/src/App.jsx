@@ -30,6 +30,7 @@ import RequireAdmin from "./components/RequireAdmin";
 import RequireClient from "./components/RequireClient";
 import RequireRole from "./components/RequireRole";
 import ChargesPage from "./pages/Charges";
+import RequireAdminOrClient from "./components/RequireAdminOrClient";
 
 export default function App() {
   return (
@@ -39,7 +40,15 @@ export default function App() {
           <Layout>
             <ErrorBoundary>
               <Routes>
-                <Route path="/" element={<Menu />} />
+                <Route
+                  path="/"
+                  element={
+                    <RequireAdminOrClient>
+                      <Menu />
+                    </RequireAdminOrClient>
+                  }
+                />
+
                 <Route path="/login" element={<Login />} />
                 <Route path="/recuperar" element={<Recover />} />
                 <Route path="/registro" element={<RegisterClient />} />

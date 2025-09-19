@@ -21,6 +21,7 @@ export default function Header() {
     navigate("/");
   };
 
+  const canSeeMenu = role === "admin" || role === "cliente";
   const canSeeMesas = role === "admin" || empRole === "mesero";
   const canSeePOS = role === "admin" || empRole === "mesero";
   const canSeePedidos =
@@ -28,9 +29,7 @@ export default function Header() {
     empRole === "mesero" ||
     empRole === "cocinero" ||
     empRole === "repartidor";
-  const canSeeRepartos =
-    empRole === "repartidor";
-
+  const canSeeRepartos = empRole === "repartidor";
   const canSeeCobros = empRole === "mesero";
 
   const linkCls = ({ isActive }) => `pz-link ${isActive ? "active" : ""}`;
@@ -47,9 +46,11 @@ export default function Header() {
         </Link>
 
         <nav className="pz-nav">
-          <NavLink to="/" end className={linkCls}>
-            Menú
-          </NavLink>
+          {canSeeMenu && (
+            <NavLink to="/" end className={linkCls}>
+              Menú
+            </NavLink>
+          )}
 
           {canSeeMesas && (
             <NavLink to="/mesas" className={linkCls}>
