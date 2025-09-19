@@ -272,28 +272,39 @@ export const OpsOrdersController = {
   },
 
   ready: async (req, res) => {
-    try {
-      const { id } = req.params;
-      const order = await OpsOrder.findByPk(id);
-      if (!order) return res.status(404).json({ error: "No encontrado" });
+  try {
+    const { id } = req.params;
+    const order = await OpsOrder.findByPk(id);
+    if (!order) return res.status(404).json({ error: "No encontrado" });
 
-      order.kitchen_ready_at = new Date();
+    order.kitchen_ready_at = new Date();
 
-      let assigned = false;
-      if (!order.courier_user_id) {
-        const { courier } = await assignFirstAvailableCourier(order);
-        assigned = !!courier;
-      } else {
-        await order.save();
-      }
-
-      const reloaded = await OpsOrder.findByPk(order.id_ops_order);
-      res.json({ ok: true, assigned, order: reloaded });
-    } catch (e) {
-      console.error("OPS READY ERROR:", e);
-      res.status(500).json({ error: "No se pudo marcar como listo" });
+    // Si es pedido de mesa o autoservicio (no requiere repartidor)
+    const isAutoServiceOrMesa = !order.customer_name && !order.customer_phone && order.mesa_id != null;
+    if (isAutoServiceOrMesa) {
+      order.status = "DELIVERED";
+      order.delivered_at = new Date();
+      order.courier_status = "DELIVERED";
+      await order.save();
+      return res.json({ ok: true, assigned: false, order });
     }
-  },
+
+    // Pedido online: flujo normal de asignación
+    let assigned = false;
+    if (!order.courier_user_id) {
+      const { courier } = await assignFirstAvailableCourier(order);
+      assigned = !!courier;
+    } else {
+      await order.save();
+    }
+
+    const reloaded = await OpsOrder.findByPk(order.id_ops_order);
+    res.json({ ok: true, assigned, order: reloaded });
+  } catch (e) {
+    console.error("OPS READY ERROR:", e);
+    res.status(500).json({ error: "No se pudo marcar como listo" });
+  }
+},
 
   assignCourier: async (req, res) => {
     try {
