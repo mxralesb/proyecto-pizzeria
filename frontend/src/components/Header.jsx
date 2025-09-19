@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/authContext";
 
@@ -29,8 +28,8 @@ export default function Header() {
     empRole === "mesero" ||
     empRole === "cocinero" ||
     empRole === "repartidor";
-  // 👇 SOLO repartidor
   const canSeeRepartos = empRole === "repartidor";
+  const canSeeCobros = empRole === "mesero";
 
   const linkCls = ({ isActive }) => `pz-link ${isActive ? "active" : ""}`;
 
@@ -74,6 +73,12 @@ export default function Header() {
           {canSeePedidos && (
             <NavLink to="/ops/pedidos" className={linkCls}>
               Pedidos
+            </NavLink>
+          )}
+
+          {canSeeCobros && (
+            <NavLink to="/cobros" className={linkCls}>
+              Cobros
             </NavLink>
           )}
 

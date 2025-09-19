@@ -116,6 +116,9 @@ export default function Navbar() {
               <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
                 Pedidos
               </Link>
+              <Link to="/cobros" className={linkCls("/cobros")}>
+                Cobros
+              </Link>
             </>
           )}
 
@@ -130,7 +133,6 @@ export default function Navbar() {
               <Link to="/ops/pedidos" className={linkCls("/ops/pedidos")}>
                 Pedidos
               </Link>
-              {/* 👇 nuevo enlace visible SOLO repartidor */}
               <Link to="/repartos" className={linkCls("/repartos")}>
                 Repartos
               </Link>

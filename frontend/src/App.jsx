@@ -27,13 +27,11 @@ import GoogleAuth from "./pages/OAuth/GoogleAuth";
 import MesasDashboard from "./pages/Mesas";
 import POSPage from "./pages/POS";
 import OrdersOpsBoard from "./pages/ops/Orders";
-
-// 👇 NUEVO: dashboard del repartidor
 import CourierDashboard from "./pages/Courier";
-
 import RequireAdmin from "./components/RequireAdmin";
 import RequireClient from "./components/RequireClient";
 import RequireRole from "./components/RequireRole";
+import ChargesPage from "./pages/Charges";
 
 export default function App() {
   return (
@@ -152,12 +150,20 @@ export default function App() {
                   }
                 />
 
-                {/* 👇 NUEVO: Repartos solo para repartidores */}
                 <Route
                   path="/repartos"
                   element={
                     <RequireRole roles={["repartidor"]}>
                       <CourierDashboard />
+                    </RequireRole>
+                  }
+                />
+
+                <Route
+                  path="/cobros"
+                  element={
+                    <RequireRole roles={["mesero"]}>
+                      <ChargesPage />
                     </RequireRole>
                   }
                 />

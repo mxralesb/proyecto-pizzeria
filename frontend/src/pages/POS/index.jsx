@@ -2,6 +2,15 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/client";
 import styles from "./POS.module.css";
 
+/** Sanea un valor de mesa y devuelve el id numérico (5, "5", "Mesa #5", etc.) */
+const parseMesaId = (val) => {
+  if (val == null) return null;
+  const m = String(val).trim().match(/\d+/);
+  if (!m) return null;
+  const n = parseInt(m[0], 10);
+  return Number.isFinite(n) ? n : null;
+};
+
 export default function POSPage() {
   const [loading, setLoading] = useState(false);
   const [tables, setTables] = useState([]);
@@ -26,7 +35,16 @@ export default function POSPage() {
           api.get("/ops/occupied-tables"),
           api.get("/menu"),
         ]);
-        setTables(tRes.data || []);
+
+        // normalizamos las mesas por si el backend devuelve strings tipo "Mesa #1"
+        const mesas = Array.isArray(tRes.data)
+          ? tRes.data.map((t) => {
+              const idNum = parseMesaId(t.id);
+              return { id: idNum ?? t.id, name: t.name || `Mesa #${idNum ?? t.id}` };
+            })
+          : [];
+
+        setTables(mesas);
         setMenu(mRes.data || []);
       } catch {
         setTables([]);
@@ -88,11 +106,22 @@ export default function POSPage() {
       notify("warning", "No hay productos");
       return;
     }
+
     try {
       setLoading(true);
 
+      // ✅ id numérico limpio
+      const mesaIdNum = parseMesaId(mesaId);
+      if (!mesaIdNum) {
+        notify("error", "No se pudo identificar la mesa seleccionada");
+        setLoading(false);
+        return;
+      }
+
       const mesaName =
-        tables.find((t) => String(t.id) === String(mesaId))?.name || mesaId;
+        tables.find(
+          (t) => String(t.id) === String(mesaId) || String(t.id) === String(mesaIdNum)
+        )?.name || `Mesa #${mesaIdNum}`;
 
       // ingredientes a partir de los productos del carrito
       const ingredientsText = Array.from(
@@ -109,7 +138,7 @@ export default function POSPage() {
 
       const payloadOps = {
         source: "Mesa de restaurante",
-        details_text: `Mesa ${mesaName} | ${describeCart()}${
+        details_text: `${mesaName} | ${describeCart()}${
           notes ? ` | Notas: ${notes}` : ""
         }`,
         ingredients_text: ingredientsText || null,
@@ -118,7 +147,7 @@ export default function POSPage() {
           qty: c.qty,
           unit_price: c.price,
         })),
-        mesa_id: Number(mesaId),
+        mesa_id: mesaIdNum, // 👈 entero
         notes,
       };
 

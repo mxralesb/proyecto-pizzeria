@@ -109,7 +109,6 @@ export default function HeaderBar() {
             </>
           )}
 
-          {/* 👇 SOLO repartidores */}
           {empRole === "repartidor" && (
             <Link
               to="/repartos"
@@ -118,6 +117,17 @@ export default function HeaderBar() {
               }`}
             >
               Repartos
+            </Link>
+          )}
+
+          {empRole === "mesero" && (
+            <Link
+              to="/cobros"
+              className={`${styles.link} ${
+                pathname === "/cobros" ? styles.active : ""
+              }`}
+            >
+              Cobros
             </Link>
           )}
         </nav>

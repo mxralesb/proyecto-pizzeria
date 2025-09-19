@@ -8,8 +8,13 @@ import {
   User,
 } from "../../../models/index.js";
 
+/* --------------------------- helpers internas --------------------------- */
+
 async function nextOrderNumber() {
-  const last = await OpsOrder.findOne({ order: [["createdAt", "DESC"]], attributes: ["order_number"] });
+  const last = await OpsOrder.findOne({
+    order: [["createdAt", "DESC"]],
+    attributes: ["order_number"],
+  });
   const n = last?.order_number?.match(/\d+/)?.[0];
   const next = (n ? parseInt(n, 10) : 0) + 1;
   return `ORD-${String(next).padStart(3, "0")}`;
@@ -19,8 +24,16 @@ async function checkStock(items = []) {
   const shortages = [];
   for (const it of items || []) {
     if (!it?.id_menu_item || !it?.qty) continue;
-    const row = await InventoryItem.findOne({ where: { id_menu_item: it.id_menu_item } });
-    if (!row || row.stock < it.qty) shortages.push({ id_menu_item: it.id_menu_item, need: it.qty, have: row?.stock ?? 0 });
+    const row = await InventoryItem.findOne({
+      where: { id_menu_item: it.id_menu_item },
+    });
+    if (!row || row.stock < it.qty) {
+      shortages.push({
+        id_menu_item: it.id_menu_item,
+        need: it.qty,
+        have: row?.stock ?? 0,
+      });
+    }
   }
   return { ok: shortages.length === 0, shortages };
 }
@@ -28,8 +41,13 @@ async function checkStock(items = []) {
 async function discountStock(items = []) {
   for (const it of items || []) {
     if (!it?.id_menu_item || !it?.qty) continue;
-    const row = await InventoryItem.findOne({ where: { id_menu_item: it.id_menu_item } });
-    if (row) { row.stock = Math.max(0, (row.stock || 0) - it.qty); await row.save(); }
+    const row = await InventoryItem.findOne({
+      where: { id_menu_item: it.id_menu_item },
+    });
+    if (row) {
+      row.stock = Math.max(0, (row.stock || 0) - it.qty);
+      await row.save();
+    }
   }
 }
 
@@ -42,7 +60,10 @@ async function ensureCourierState(userId) {
 }
 
 async function assignFirstAvailableCourier(order) {
-  const free = await CourierState.findOne({ where: { is_available: true }, order: [["updatedAt", "ASC"]] });
+  const free = await CourierState.findOne({
+    where: { is_available: true },
+    order: [["updatedAt", "ASC"]],
+  });
   if (!free) return { courier: null, state: null };
   const courier = await User.findByPk(free.user_id);
   order.courier_user_id = free.user_id;
@@ -56,23 +77,45 @@ async function assignFirstAvailableCourier(order) {
   return { courier, state: free };
 }
 
+/** Sanea mesa_id viniendo como 5, "5", "Mesa #5", "mesa 5", etc. */
+function parseMesaId(value) {
+  if (value == null) return null;
+  const m = String(value).trim().match(/\d+/);
+  if (!m) return null;
+  const n = parseInt(m[0], 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+/* --------------------------------- CRUD -------------------------------- */
+
 export const OpsOrdersController = {
   create: async (req, res) => {
     try {
       const { source, details_text, ingredients_text, items } = req.body;
       if (!source) return res.status(400).json({ error: "source es requerido" });
 
+      // stock
       if (Array.isArray(items) && items.length) {
         const stock = await checkStock(items);
-        if (!stock.ok) return res.status(409).json({ error: "Stock insuficiente", shortages: stock.shortages });
+        if (!stock.ok) {
+          return res
+            .status(409)
+            .json({ error: "Stock insuficiente", shortages: stock.shortages });
+        }
       }
 
+      // ingredientes (fallback)
       let finalIngredients = ingredients_text;
       if ((!finalIngredients || !String(finalIngredients).trim()) && Array.isArray(items) && items.length) {
-        const ids = items.map(i => i.id_menu_item).filter(Boolean);
+        const ids = items.map((i) => i.id_menu_item).filter(Boolean);
         const menuItems = ids.length ? await MenuItem.findAll({ where: { id: ids } }) : [];
         finalIngredients = Array.from(
-          new Set(menuItems.map(m => m.ingredients || m.ingredientes || m.description).filter(Boolean).map(s => String(s).trim()))
+          new Set(
+            menuItems
+              .map((m) => m.ingredients || m.ingredientes || m.description)
+              .filter(Boolean)
+              .map((s) => String(s).trim())
+          )
         ).join(" | ");
       }
 
@@ -84,7 +127,11 @@ export const OpsOrdersController = {
         customer_address = null,
         payment_method = null,
         change_due = null,
+        mesa_id = null,
       } = req.body || {};
+
+      // ✅ Saneamos mesa_id siempre
+      const mesaIdParsed = parseMesaId(mesa_id);
 
       const order = await OpsOrder.create({
         order_number,
@@ -100,11 +147,12 @@ export const OpsOrdersController = {
         courier_user_id: null,
         courier_name: null,
         courier_status: null,
+        mesa_id: mesaIdParsed, // 👈 aquí ya va entero (o null)
       });
 
       if (Array.isArray(items) && items.length) {
         await OpsOrderItem.bulkCreate(
-          items.map(it => ({
+          items.map((it) => ({
             id_ops_order: order.id_ops_order,
             id_menu_item: it.id_menu_item,
             qty: Number(it.qty || 1),
@@ -242,7 +290,8 @@ export const OpsOrdersController = {
 
       const order = await OpsOrder.findByPk(id);
       if (!order) return res.status(404).json({ error: "Pedido no encontrado" });
-      if (order.courier_user_id !== userId) return res.status(403).json({ error: "No eres el repartidor asignado" });
+      if (order.courier_user_id !== userId)
+        return res.status(403).json({ error: "No eres el repartidor asignado" });
 
       const allowed = ["ON_ROUTE", "ARRIVED", "DELIVERED"];
       if (!allowed.includes(status)) return res.status(400).json({ error: "Estado inválido" });

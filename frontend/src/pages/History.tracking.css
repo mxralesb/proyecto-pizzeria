@@ -1,0 +1,48 @@
+/* contenedor del panel colapsable */
+.trk-panel {
+  overflow: hidden;
+  transition: grid-template-rows 240ms ease, opacity 240ms ease;
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  border-top: 1px dashed #eee;
+  margin-top: 6px;
+}
+.trk-panel.open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.trk-inner { min-height: 0; padding: 12px 6px; background: #fafafa; border-radius: 8px; }
+
+/* encabezado */
+.trk-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 8px; }
+.trk-title { font-weight:800; }
+.trk-sub { font-size:12px; color:#6b7280; }
+.trk-pill { padding:4px 10px; border-radius:999px; font-weight:700; font-size:12px; }
+.trk-pill.ok { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+.trk-pill.wait { background:#eef2ff; color:#3730a3; border:1px solid #e0e7ff; }
+
+/* timeline */
+.timeline { list-style:none; margin:0; padding:0; }
+.step { position:relative; display:flex; align-items:flex-start; gap:12px; padding:8px 0; }
+.step .dot { width:10px; height:10px; border-radius:999px; background:#d1d5db; margin-top:5px; flex:0 0 10px; }
+.step.done .dot { background:#22c55e; }
+.step::before { content:""; position:absolute; left:4px; top:0; bottom:0; width:2px; background:#e5e7eb; }
+.step:first-child::before { top:10px; }
+.step:last-child::before { bottom:10px; }
+.lbl { display:grid; }
+.lbl .t { font-weight:700; }
+.lbl .time { color:#6b7280; font-size:12px; }
+
+/* items */
+.trk-items { margin-top: 6px; }
+.trk-items h4 { margin:0 0 6px 0; }
+.trk-list { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.trk-item { display:flex; gap:10px; align-items:center; background:#fff; border:1px solid #eee; border-radius:10px; padding:8px; }
+.trk-thumb { width:40px; height:40px; display:grid; place-items:center; background:#f3f4f6; border-radius:8px; overflow:hidden; }
+.trk-thumb img { width:100%; height:100%; object-fit:cover; }
+.trk-txt { flex:1; }
+.trk-row { display:flex; justify-content:space-between; }
+.trk-muted { color:#6b7280; font-size:12px; }
+
+.trk-box { border:1px dashed #e5e7eb; padding:10px; border-radius:8px; background:#fff; margin-top:8px; }

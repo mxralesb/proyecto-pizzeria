@@ -1,17 +1,13 @@
-// backend/src/modules/orders/order.routes.js
+// backend/src/modules/orders/tracking.routes.js
 import { Router } from "express";
 import { requireAuth } from "../../middleware/auth.js";
 import { requireRole } from "../../middleware/roles.js";
-import { listMyOrders, createOrder } from "./order.controller.js";
 import { trackOrder } from "./tracking.controller.js";
 
 const router = Router();
 const guard = [requireAuth, requireRole("cliente")];
 
-router.get("/me", guard, listMyOrders);
-router.post("/", guard, createOrder);
-
-// tracking por id de la orden (ej: /api/orders/8/track → ORD-008)
+// misma ruta que en order.routes.js (elige UNA de las dos en app.js)
 router.get("/:id/track", guard, trackOrder);
 
 export default router;
