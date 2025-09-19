@@ -21,7 +21,7 @@ import {
     ]);
 
     await EmployeeRole.bulkCreate(
-      [{ name: "Cocinero" }, { name: "Repartidor" }, { name: "Mesero" }, { name: "Cajero" }],
+      [{ name: "Cocinero" }, { name: "Repartidor" }, { name: "Mesero" }],
       { ignoreDuplicates: true }
     );
 

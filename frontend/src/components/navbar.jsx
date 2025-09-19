@@ -64,14 +64,6 @@ export default function Navbar() {
           <Link to="/" className={linkCls("/")}>
             Menú
           </Link>
-          <Link to="/reservar" className={linkCls("/reservar")}>
-            Reservar
-          </Link>
-          {user && (
-            <Link to="/mis-reservas" className={linkCls("/mis-reservas")}>
-              Mis reservas
-            </Link>
-          )}
 
           {role === "admin" && (
             <>

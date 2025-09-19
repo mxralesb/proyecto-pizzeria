@@ -1,10 +1,11 @@
-// backend/src/modules/auth/auth.controller.js
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import { env } from "../../config/env.js";
 import { sequelize, User, Cliente, Direccion, Telefono } from "../../models/index.js";
+import { sendMail } from "../../utils/mailer.js";
+import { recoverEmailHtml } from "../../utils/templates/recover.js";
 
 const googleClient = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -54,7 +55,6 @@ export const register = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: "Error en el servidor" });
   }
 };
@@ -78,7 +78,6 @@ export const login = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("LOGIN ERROR:", e);
     res.status(500).json({ error: "Error en el servidor" });
   }
 };
@@ -91,9 +90,15 @@ export const recoverPassword = async (req, res) => {
     const temp = crypto.randomBytes(6).toString("base64url");
     const hash = await bcrypt.hash(temp, 10);
     await User.update({ password: hash }, { where: { id: user.id } });
-    res.json({ ok: true, temp });
+    const subject = "Tu nueva contraseña temporal";
+    const html = recoverEmailHtml({
+      name: user.name || "Usuario",
+      tempPassword: temp,
+      supportEmail: "pedidos@pizza.gt",
+    });
+    await sendMail(email.trim().toLowerCase(), subject, html);
+    res.json({ ok: true });
   } catch (e) {
-    console.error("RECOVER ERROR:", e);
     res.status(500).json({ error: "Error al enviar correo" });
   }
 };
@@ -103,7 +108,6 @@ export const loginWithGoogleCliente = async (req, res) => {
   try {
     const { idToken, direccion, telefono } = req.body;
     if (!idToken) return res.status(400).json({ error: "Falta idToken" });
-
     const ticket = await googleClient.verifyIdToken({
       idToken,
       audience: env.GOOGLE_CLIENT_ID,
@@ -115,14 +119,11 @@ export const loginWithGoogleCliente = async (req, res) => {
       await t.rollback();
       return res.status(400).json({ error: "No se pudo obtener el correo" });
     }
-
     let cliente = await Cliente.findOne({ where: { correo_electronico: email } });
-
     if (!cliente) {
       const parts = splitNombreCompleto(fullName);
       const randomPass = crypto.randomBytes(16).toString("hex");
       const hash = await bcrypt.hash(randomPass, 10);
-
       cliente = await Cliente.create(
         {
           nombre: parts.nombre,
@@ -132,7 +133,6 @@ export const loginWithGoogleCliente = async (req, res) => {
         },
         { transaction: t }
       );
-
       if (direccion?.tipo_direccion && direccion?.calle && direccion?.ciudad) {
         await Direccion.create(
           {
@@ -146,7 +146,6 @@ export const loginWithGoogleCliente = async (req, res) => {
           { transaction: t }
         );
       }
-
       if (telefono?.numero && telefono?.tipo) {
         await Telefono.create(
           {
@@ -158,9 +157,7 @@ export const loginWithGoogleCliente = async (req, res) => {
         );
       }
     }
-
     await t.commit();
-
     const token = jwt.sign(
       {
         id: cliente.id_cliente,
@@ -172,7 +169,6 @@ export const loginWithGoogleCliente = async (req, res) => {
       env.JWT_SECRET,
       { expiresIn: "8h" }
     );
-
     return res.json({
       token,
       user: {
@@ -183,7 +179,6 @@ export const loginWithGoogleCliente = async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("loginWithGoogleCliente error:", e);
     await t.rollback();
     return res.status(500).json({ error: "No se pudo autenticar con Google" });
   }

@@ -28,7 +28,9 @@ export default function Header() {
     empRole === "mesero" ||
     empRole === "cocinero" ||
     empRole === "repartidor";
-  const canSeeRepartos = empRole === "repartidor";
+  const canSeeRepartos =
+    empRole === "repartidor";
+
   const canSeeCobros = empRole === "mesero";
 
   const linkCls = ({ isActive }) => `pz-link ${isActive ? "active" : ""}`;
@@ -48,15 +50,6 @@ export default function Header() {
           <NavLink to="/" end className={linkCls}>
             Menú
           </NavLink>
-          <NavLink to="/reservar" className={linkCls}>
-            Reservar
-          </NavLink>
-
-          {user && (
-            <NavLink to="/mis-reservas" className={linkCls}>
-              Mis reservas
-            </NavLink>
-          )}
 
           {canSeeMesas && (
             <NavLink to="/mesas" className={linkCls}>
@@ -92,12 +85,6 @@ export default function Header() {
             <>
               <NavLink to="/empleados" className={linkCls}>
                 Empleados
-              </NavLink>
-              <NavLink to="/orders" className={linkCls}>
-                Órdenes
-              </NavLink>
-              <NavLink to="/delivery" className={linkCls}>
-                Delivery
               </NavLink>
               <NavLink to="/inventory" className={linkCls}>
                 Inventario

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import api from "../../api/client";
 import styles from "./POS.module.css";
 
+/** ID especial para Autoservicio (no numérico, nos sirve para diferenciarlo) */
+const AUTO_ID = "AUTO";
+
 /** Sanea un valor de mesa y devuelve el id numérico (5, "5", "Mesa #5", etc.) */
 const parseMesaId = (val) => {
   if (val == null) return null;
@@ -36,18 +39,22 @@ export default function POSPage() {
           api.get("/menu"),
         ]);
 
-        // normalizamos las mesas por si el backend devuelve strings tipo "Mesa #1"
-        const mesas = Array.isArray(tRes.data)
+        // normalizamos mesas devueltas por backend
+        const mesasBack = Array.isArray(tRes.data)
           ? tRes.data.map((t) => {
               const idNum = parseMesaId(t.id);
               return { id: idNum ?? t.id, name: t.name || `Mesa #${idNum ?? t.id}` };
             })
           : [];
 
-        setTables(mesas);
+        // ✅ Insertamos "Autoservicio" como opción adicional
+        const withAuto = [{ id: AUTO_ID, name: "Autoservicio" }, ...mesasBack];
+
+        setTables(withAuto);
         setMenu(mRes.data || []);
       } catch {
-        setTables([]);
+        // aun si falla, mostramos Autoservicio
+        setTables([{ id: AUTO_ID, name: "Autoservicio" }]);
         setMenu([]);
       } finally {
         setLoading(false);
@@ -99,7 +106,7 @@ export default function POSPage() {
 
   const sendOrder = async () => {
     if (!mesaId) {
-      notify("warning", "Selecciona una mesa ocupada");
+      notify("warning", "Selecciona una mesa o Autoservicio");
       return;
     }
     if (cart.length === 0) {
@@ -110,18 +117,22 @@ export default function POSPage() {
     try {
       setLoading(true);
 
-      // ✅ id numérico limpio
-      const mesaIdNum = parseMesaId(mesaId);
-      if (!mesaIdNum) {
+      // ¿Es autoservicio?
+      const isAuto = String(mesaId) === AUTO_ID;
+
+      // Para autoservicio NO exigimos id numérico de mesa
+      const mesaIdNum = isAuto ? null : parseMesaId(mesaId);
+      if (!isAuto && !mesaIdNum) {
         notify("error", "No se pudo identificar la mesa seleccionada");
         setLoading(false);
         return;
       }
 
-      const mesaName =
-        tables.find(
-          (t) => String(t.id) === String(mesaId) || String(t.id) === String(mesaIdNum)
-        )?.name || `Mesa #${mesaIdNum}`;
+      const mesaName = isAuto
+        ? "Autoservicio"
+        : tables.find(
+            (t) => String(t.id) === String(mesaId) || String(t.id) === String(mesaIdNum)
+          )?.name || `Mesa #${mesaIdNum}`;
 
       // ingredientes a partir de los productos del carrito
       const ingredientsText = Array.from(
@@ -137,17 +148,17 @@ export default function POSPage() {
       ).join(" | ");
 
       const payloadOps = {
-        source: "Mesa de restaurante",
-        details_text: `${mesaName} | ${describeCart()}${
-          notes ? ` | Notas: ${notes}` : ""
-        }`,
+        // 👇 Esto controla lo que ve el cocinero en “Proveniencia”
+        source: isAuto ? "Autoservicio" : "Mesa de restaurante",
+        details_text: `${mesaName} | ${describeCart()}${notes ? ` | Notas: ${notes}` : ""}`,
         ingredients_text: ingredientsText || null,
         items: cart.map((c) => ({
           id_menu_item: c.id,
           qty: c.qty,
           unit_price: c.price,
         })),
-        mesa_id: mesaIdNum, // 👈 entero
+        // En autoservicio lo dejamos nulo; en mesa, enviamos el entero
+        mesa_id: mesaIdNum,
         notes,
       };
 
@@ -192,7 +203,7 @@ export default function POSPage() {
       <h2 className="pz-title">POS</h2>
 
       <div className={styles.headerRow}>
-        <label>Mesa ocupada:</label>
+        <label>Número de mesa o Autoservicio</label>
         <select
           className={styles.select}
           value={mesaId}

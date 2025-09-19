@@ -3,17 +3,14 @@ import {
   register,
   login,
   recoverPassword,
-  loginWithGoogleCliente, // <- usamos este
+  loginWithGoogleCliente,
 } from "./auth.controller.js";
 
 const router = Router();
 
-// Admin / empleados (tabla users)
 router.post("/register", register);
 router.post("/login", login);
 router.post("/recover", recoverPassword);
-
-// Google SOLO para clientes (tabla clientes)
-router.post("/google/cliente", loginWithGoogleCliente); // <- ruta correcta
+router.post("/google/cliente", loginWithGoogleCliente);
 
 export default router;

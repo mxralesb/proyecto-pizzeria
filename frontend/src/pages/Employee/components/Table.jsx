@@ -22,17 +22,18 @@ export default function Table({ data, loading }) {
             <th>Salario</th>
             <th>Rol</th>
             <th>Activo</th>
+            <th style={{width:140}}>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {loading ? (
-            <tr><td colSpan={13} className={styles.center}>Cargando…</td></tr>
+            <tr><td colSpan={14} className={styles.center}>Cargando…</td></tr>
           ) : data.length === 0 ? (
-            <tr><td colSpan={13} className={styles.center}>Sin resultados</td></tr>
+            <tr><td colSpan={14} className={styles.center}>Sin resultados</td></tr>
           ) : (
             data.map((e) => (
               <tr key={e.id}>
-                <td>{e.cui}</td>
+                <td>{e.cui || "—"}</td>
                 <td>{e.primer_nombre}</td>
                 <td>{e.segundo_nombre || ""}</td>
                 <td>{e.otros_nombres || ""}</td>
@@ -42,9 +43,19 @@ export default function Table({ data, loading }) {
                 <td>{e.telefono}</td>
                 <td>{e.telefono_emergencia || ""}</td>
                 <td>{fmtDate(e.fecha_contratacion)}</td>
-                <td>{fmtMoney(e.salario)}</td>
-                <td>{e.rol?.name || ""}</td>
-                <td>{e.activo ? "Sí" : "No"}</td>
+                <td className={styles.money}>{fmtMoney(e.salario)}</td>
+                <td><span className={styles.badgeRole}>{e.rol?.name || ""}</span></td>
+                <td>
+                  <span className={`${styles.pill} ${e.activo ? styles.active : styles.inactive}`}>
+                    {e.activo ? "Activo" : "Inactivo"}
+                  </span>
+                </td>
+                <td>
+                  <div className={styles.actions}>
+                    <button className={`${styles.btnSm} ${styles.primary}`}>Editar</button>
+                    <button className={`${styles.btnSm} ${styles.danger}`}>{e.activo ? "Inactivar" : "Activar"}</button>
+                  </div>
+                </td>
               </tr>
             ))
           )}

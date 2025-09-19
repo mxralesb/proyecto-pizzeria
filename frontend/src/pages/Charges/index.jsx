@@ -1,5 +1,5 @@
 // frontend/src/pages/Charges/index.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import api from "../../api/client";
 import BillingAPI from "../../api/billing";
@@ -34,6 +34,16 @@ export default function ChargesPage() {
   // modal de pago
   const [showPayModal, setShowPayModal] = useState(false);
   const [ticketToPay, setTicketToPay] = useState(null);
+
+  // ---------- Toast bonito ----------
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+  const notify = (type, message) => {
+    setToast({ type, message });
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 3200);
+  };
+  // ----------------------------------
 
   const loadMesas = async () => {
     try {
@@ -77,14 +87,17 @@ export default function ChargesPage() {
   const onSubmitCrear = async (e) => {
     e.preventDefault();
     const id = getNumeric(mesaId);
-    if (!id) return alert("Selecciona una mesa válida");
+    if (!id) {
+      notify("warning", "Selecciona una mesa válida");
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await BillingAPI.createFromMesa(id);
       await loadTickets();
-      alert(`Ticket creado para Mesa #${data?.mesa_id ?? id}`);
+      notify("success", `Ticket creado para Mesa #${data?.mesa_id ?? id}`);
     } catch (e2) {
-      alert(e2?.response?.data?.error || "No se pudo crear el ticket");
+      notify("error", e2?.response?.data?.error || "No se pudo crear el ticket");
     } finally {
       setLoading(false);
     }
@@ -92,16 +105,19 @@ export default function ChargesPage() {
 
   const probarPostDirecto = async () => {
     const id = getNumeric(mesaId);
-    if (!id) return alert("Selecciona una mesa válida");
+    if (!id) {
+      notify("warning", "Selecciona una mesa válida");
+      return;
+    }
     setLoading(true);
     try {
       const { data } = await api.post("/billing/tickets/from-ops", {
         mesa_id: id,
       });
       await loadTickets();
-      alert(`POST directo OK (Mesa #${data?.mesa_id ?? id})`);
+      notify("success", `POST directo OK (Mesa #${data?.mesa_id ?? id})`);
     } catch (e) {
-      alert(e?.response?.data?.error || "Falló POST directo");
+      notify("error", e?.response?.data?.error || "Falló POST directo");
     } finally {
       setLoading(false);
     }
@@ -180,6 +196,37 @@ export default function ChargesPage() {
 
   return (
     <div className="pz-container" style={{ padding: "24px 0" }}>
+      {/* Toast */}
+      {toast && (
+        <div className={styles.toastWrap}>
+          <motion.div
+            className={`${styles.toast} ${styles[toast.type || "info"]}`}
+            initial={{ y: -10, opacity: 0, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -10, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 320, damping: 22 }}
+          >
+            <span className={styles.toastIcon}>
+              {toast.type === "success"
+                ? "✅"
+                : toast.type === "error"
+                ? "❌"
+                : toast.type === "warning"
+                ? "⚠️"
+                : "ℹ️"}
+            </span>
+            <span className={styles.toastMsg}>{toast.message}</span>
+            <button
+              className={styles.toastClose}
+              onClick={() => setToast(null)}
+              aria-label="Cerrar notificación"
+            >
+              ✕
+            </button>
+          </motion.div>
+        </div>
+      )}
+
       <h2 className="pz-title">Cobros</h2>
 
       <div className={styles.toolbar}>
@@ -266,9 +313,9 @@ export default function ChargesPage() {
             });
             await loadTickets();
             buildInvoicePDF(data);
-            alert(`Cobrado Mesa #${ticketToPay.mesa_id}`);
+            notify("success", `💸 Cobro registrado — Mesa #${ticketToPay.mesa_id}`);
           } catch (e) {
-            alert(e?.response?.data?.error || "No se pudo cobrar");
+            notify("error", e?.response?.data?.error || "No se pudo cobrar");
           } finally {
             setLoading(false);
             setTicketToPay(null);

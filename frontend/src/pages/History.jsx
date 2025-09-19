@@ -21,7 +21,6 @@ const STATUS_LABEL = {
 const fmtQ = (v) =>
   new Intl.NumberFormat("es-GT", { style: "currency", currency: "GTQ" }).format(v || 0);
 
-// intenta usar order_number si existe; si no, prueba con "ORD-###"
 function guessOpsOrderNumber(order) {
   if (order.order_number) return order.order_number;
   const n = Number(order.id_order || 0);
@@ -33,7 +32,6 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
 
-  // tracking
   const [openId, setOpenId] = useState(null);
   const [loadingTrack, setLoadingTrack] = useState(false);
   const [trackMap, setTrackMap] = useState({}); // { [id_order]: trackingData }
@@ -150,15 +148,6 @@ export default function History() {
                     </div>
                   </div>
                 </footer>
-
-                {/* Botón ver estado */}
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>
-                  <button className="pz-btn pz-btn-outline" onClick={() => toggleTrack(o)}>
-                    {isOpen ? "Ocultar estado" : "Ver estado"}
-                  </button>
-                </div>
-
-                {/* Panel colapsable con animación CSS */}
                 <div className={`trk-panel ${isOpen ? "open" : ""}`}>
                   <div className="trk-inner">
                     {loadingTrack && !trk && <div style={{ color: "#6b7280" }}>Cargando estado…</div>}

@@ -1,2 +1,27 @@
-.wrap { padding: 20px; }
-.title { margin: 0 0 16px 0; }
+.wrap {
+  padding: 18px 0 42px;
+}
+
+.title {
+  margin: 0 0 14px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.title::after{
+  content: "";
+  height: 4px;
+  width: 56px;
+  background: linear-gradient(90deg,#ffe3a6,#f9c23c);
+  border-radius: 999px;
+  display: inline-block;
+  margin-left: 2px;
+  animation: slideIn .5s ease both;
+}
+@keyframes slideIn {
+  from { transform: translateX(-12px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}

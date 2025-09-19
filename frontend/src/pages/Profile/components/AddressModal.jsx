@@ -50,7 +50,7 @@ export default function AddressModal({ current, onClose, onSave }) {
           onChange={(e) => setForm((f) => ({ ...f, ciudad: e.target.value }))}
         />
 
-        <label>Estado</label>
+        <label>Municipio</label>
         <input
           value={form.estado || ""}
           onChange={(e) => setForm((f) => ({ ...f, estado: e.target.value }))}

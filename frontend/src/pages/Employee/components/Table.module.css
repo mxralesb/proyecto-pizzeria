@@ -1,5 +1,95 @@
-.tableWrap { width:100%; overflow-x:auto; }
-.table { width:100%; border-collapse:collapse; }
-.table thead th { background:#f6f6f6; padding:10px; border:1px solid #e9e9e9; white-space:nowrap; }
-.table tbody td { padding:8px; border:1px solid #eee; vertical-align:top; }
-.center { text-align:center; padding:14px; }
+.tableWrap{
+  background: #fff;
+  border: 1px solid #eef1f6;
+  border-radius: 14px;
+  overflow: auto;
+  box-shadow: 0 6px 26px rgba(16,24,40,.06);
+  position: relative;
+}
+
+/* sutil sombras al hacer scroll */
+.tableWrap::after,
+.tableWrap::before{
+  content:"";
+  position: sticky;
+  left:0; right:0;
+  height: 8px;
+  display:block;
+}
+.tableWrap::before{ top:0; box-shadow: inset 0 6px 8px -6px rgba(16,24,40,.18); }
+.tableWrap::after{ bottom:0; box-shadow: inset 0 -6px 8px -6px rgba(16,24,40,.1); }
+
+.table{
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 980px;
+}
+
+.table thead th{
+  position: sticky;
+  top: 0;
+  background: #fbfcff;
+  z-index: 1;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6b7280;
+  padding: 12px 12px;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.table tbody td{
+  padding: 12px;
+  border-bottom: 1px solid #f2f4f9;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table tbody tr:nth-child(odd){
+  background: #fff;
+}
+.table tbody tr:nth-child(even){
+  background: #fcfdff;
+}
+
+.table tbody tr{
+  transition: background .2s ease, box-shadow .2s ease, transform .06s ease;
+}
+.table tbody tr:hover{
+  background: #fffef8;
+  box-shadow: 0 2px 0 rgba(249,199,88,.35) inset;
+}
+
+.center{ text-align: center; color:#6b7280; padding: 18px; }
+
+/* estado Activo/Inactivo como pill */
+.pill{
+  display:inline-flex; align-items:center; gap:6px;
+  height: 24px; padding: 0 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 700; letter-spacing:.02em;
+  border: 1px solid;
+}
+.active{ background:#e8fff1; color:#0a7f3f; border-color:#bff0d3; }
+.inactive{ background:#fff3f5; color:#b10a2a; border-color:#ffc7d0; }
+
+/* Botones de acciones en la tabla */
+.actions{ display:flex; gap:8px; }
+.btnSm{
+  height: 28px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid #e6e8ee; background:#f7f8fb; color:#111827;
+  font-weight: 700; font-size: 12px; cursor:pointer;
+  transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+}
+.btnSm:hover{ box-shadow: 0 6px 18px rgba(0,0,0,.06); transform: translateY(-1px); }
+.btnSm:active{ transform: translateY(0); }
+
+.primary{ background: linear-gradient(180deg,#ffd56a,#f8b62d); border-color:#f3b13a; }
+.danger{ background: #ffe8ec; color:#9b142b; border-color:#ffc2cc; }
+.ghost { background:#fff; }
+
+.badgeRole{
+  display:inline-block; padding:2px 8px; border-radius:999px;
+  background:#eef2ff; color:#3730a3; font-size:12px; font-weight:700;
+}
+.money{ font-variant-numeric: tabular-nums; }

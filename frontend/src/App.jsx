@@ -12,8 +12,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Menu from "./pages/Menu";
 import Login from "./pages/Login";
 import Recover from "./pages/Recover";
-import Reserve from "./pages/Reserve";
-import MyReservations from "./pages/MyReservations";
 import Employee from "./pages/Employee";
 import Orders from "./pages/Orders";
 import Delivery from "./pages/Delivery";
@@ -42,7 +40,6 @@ export default function App() {
             <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<Menu />} />
-                <Route path="/reservar" element={<Reserve />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/recuperar" element={<Recover />} />
                 <Route path="/registro" element={<RegisterClient />} />
@@ -54,14 +51,6 @@ export default function App() {
                   element={
                     <RequireClient>
                       <ProfilePage />
-                    </RequireClient>
-                  }
-                />
-                <Route
-                  path="/mis-reservas"
-                  element={
-                    <RequireClient>
-                      <MyReservations />
                     </RequireClient>
                   }
                 />

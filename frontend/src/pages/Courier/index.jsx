@@ -106,13 +106,11 @@ function OrderCard({ order, onAction, loading }) {
           </div>
           {paymentMethod === "efectivo" && (
             <div>
-              Cambio: <strong>Q {Number(changeDue).toFixed(2)}</strong>
             </div>
           )}
         </div>
 
         <div>
-          <h4>Detalle</h4>
           <div className={styles.items}>
             {(order.items || []).map((it) => (
               <div
@@ -137,7 +135,6 @@ function OrderCard({ order, onAction, loading }) {
         <div className={styles.progressBar}>
           <div className={styles.progressFill} style={{ width: `${pct}%` }} />
         </div>
-        <small>ETA simulado • progreso {pct}%</small>
       </div>
 
       <footer className={styles.cardFooter}>

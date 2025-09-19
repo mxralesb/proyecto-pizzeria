@@ -1,7 +1,6 @@
 import { sequelize } from "../models/index.js";
 
 export async function ensureOrderOpsLink() {
-  // averiguar el nombre real de la tabla del modelo Order
   const [r] = await sequelize.query(`
     SELECT table_name
     FROM information_schema.tables
