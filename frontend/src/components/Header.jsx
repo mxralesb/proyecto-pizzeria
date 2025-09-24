@@ -8,7 +8,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const navRef = useRef(null);
 
-  // Cierra el menú al cambiar de tamaño a desktop
+  // Cierra el menú al cambiar a desktop
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 820) setOpen(false);
@@ -19,14 +19,12 @@ export default function Header() {
 
   // Cierra con ESC
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
 
-  // Cierra al hacer click fuera
+  // Cierra clic fuera
   useEffect(() => {
     const onClick = (e) => {
       if (!open) return;
@@ -56,7 +54,10 @@ export default function Header() {
   const canSeeMesas = role === "admin" || empRole === "mesero";
   const canSeePOS = role === "admin" || empRole === "mesero";
   const canSeePedidos =
-    role === "admin" || empRole === "mesero" || empRole === "cocinero" || empRole === "repartidor";
+    role === "admin" ||
+    empRole === "mesero" ||
+    empRole === "cocinero" ||
+    empRole === "repartidor";
   const canSeeRepartos = empRole === "repartidor";
   const canSeeCobros = empRole === "mesero";
 
@@ -73,25 +74,26 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Botón hamburguesa (solo móvil) */}
+        {/* Botón hamburguesa + etiqueta “Menú/Cerrar” (solo móvil) */}
         <button
           className={`pz-burger ${open ? "is-open" : ""}`}
-          aria-label="Abrir menú"
+          aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
           aria-controls="mainmenu"
           onClick={() => setOpen((v) => !v)}
+          type="button"
         >
           <span />
           <span />
           <span />
+          <span className="pz-burger-label">{open ? "Cerrar" : "Menú"}</span>
         </button>
 
-        {/* NAV: en desktop inline; en móvil drawer/top */}
+        {/* NAV: desktop inline; móvil como panel desplegable */}
         <nav
           id="mainmenu"
           ref={navRef}
           className={`pz-nav ${open ? "open" : ""}`}
-          aria-hidden={!open && window.innerWidth < 820}
         >
           {canSeeMenu && (
             <NavLink to="/" end className={linkCls} onClick={() => setOpen(false)}>
@@ -140,20 +142,34 @@ export default function Header() {
             </>
           )}
 
-          {/* Acciones visibles también dentro del menú en móvil */}
+          {/* Acciones también dentro del menú en móvil */}
           <div className="pz-actions pz-actions--mobile">
             {role === "cliente" && (
-              <Link to="/perfil" className="pz-btn pz-btn-outline" onClick={() => setOpen(false)}>
+              <Link
+                to="/perfil"
+                className="pz-btn pz-btn-outline"
+                onClick={() => setOpen(false)}
+              >
                 Perfil
               </Link>
             )}
 
             {!user ? (
-              <Link to="/login" className="pz-btn pz-btn-outline" onClick={() => setOpen(false)}>
+              <Link
+                to="/login"
+                className="pz-btn pz-btn-outline"
+                onClick={() => setOpen(false)}
+              >
                 Iniciar sesión
               </Link>
             ) : (
-              <button className="pz-btn pz-btn-primary" onClick={() => { setOpen(false); handleLogout(); }}>
+              <button
+                className="pz-btn pz-btn-primary"
+                onClick={() => {
+                  setOpen(false);
+                  handleLogout();
+                }}
+              >
                 Salir
               </button>
             )}
