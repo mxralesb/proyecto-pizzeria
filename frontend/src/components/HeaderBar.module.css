@@ -2,19 +2,25 @@
   position: sticky; top: 0;
   background: #fff;
   border-bottom: 1px solid #e5e7eb;
-  z-index: 200; 
+  z-index: 200;
+  /* iOS safe areas */
+  padding-top: env(safe-area-inset-top);
 }
+
 .inner {
   max-width: 1100px; width: 92%;
   margin: 0 auto;
   height: 64px;
   display: flex; align-items: center; gap: 16px;
 }
+
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #0f172a; }
 .logo { font-size: 24px; }
 .brandText { font-weight: 700; font-size: 18px; }
 
+/* Desktop nav */
 .nav { display: flex; gap: 14px; margin-left: 12px; }
+
 .link {
   text-decoration: none; color: #334155;
   font-weight: 500; padding: 8px 10px; border-radius: 10px;
@@ -45,6 +51,73 @@
 }
 .user { color: #4b5563; font-size: 14px; }
 
+/* --- Mobile styles --- */
+.menuBtn {
+  display: none;
+  margin-left: 4px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.menuIcon {
+  display: block;
+  width: 22px; height: 2px;
+  background: #0f172a;
+  position: relative;
+}
+.menuIcon::before, .menuIcon::after {
+  content: "";
+  position: absolute; left: 0;
+  width: 22px; height: 2px; background: #0f172a;
+}
+.menuIcon::before { top: -6px; }
+.menuIcon::after { top: 6px; }
+
+/* Panel que se despliega en móvil */
+.navPanel {
+  display: none;
+}
+
 @media (max-width: 780px) {
+  /* Oculta nav horizontal, muestra botón */
   .nav { display: none; }
+  .menuBtn { display: inline-flex; align-items: center; }
+
+  /* Panel desplegable */
+  .navPanel {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top));
+    left: 0; right: 0;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    box-shadow: 0 10px 30px rgba(2,6,23,.08);
+    display: grid;
+    gap: 6px;
+    padding: 12px 16px 16px;
+    transform: translateY(-8px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform .18s ease, opacity .18s ease;
+  }
+  .open {
+    transform: translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Links más tocables */
+  .panelLink {
+    text-decoration: none;
+    color: #334155;
+    font-weight: 600;
+    padding: 12px 10px;
+    border-radius: 10px;
+  }
+  .panelActive { background: #fff7ed; color: #d64545; }
+
+  /* Acciones compactas */
+  .actions { gap: 6px; }
+  .user { display: none; } /* Oculta saludo para ganar espacio */
 }
