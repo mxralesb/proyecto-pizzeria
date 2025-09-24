@@ -388,3 +388,55 @@ h2{ border-left:4px solid var(--pz-red); padding-left:10px; }
 }
 .pz-btn-shake { animation: pz-shake .35s ease; }
 .pz-btn-ghost.is-disabled { opacity: .6; cursor: not-allowed; }
+
+
+/* base (ya lo tenías parecido) */
+.pz-header{position:sticky;top:0;background:#fff;border-bottom:1px solid #e5e7eb;z-index:200}
+.pz-container{max-width:1100px;width:92%;margin:0 auto}
+.pz-header-inner{height:64px;display:flex;align-items:center;gap:16px}
+.pz-brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#0f172a}
+.pz-logo{font-size:24px}
+.pz-brand-text strong{display:block;font-size:18px;font-weight:700;line-height:1}
+.pz-brand-text small{display:block;font-size:11px;color:#64748b;margin-top:2px}
+
+.pz-nav{display:flex;gap:14px;margin-left:12px}
+.pz-link{text-decoration:none;color:#334155;font-weight:500;padding:8px 10px;border-radius:10px}
+.pz-link.active{background:#fff7ed;color:#d64545}
+
+.pz-actions{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pz-btn{border-radius:10px;padding:8px 12px;text-decoration:none;cursor:pointer}
+.pz-btn-outline{border:1px solid #d64545;color:#d64545;background:#fff}
+.pz-btn-outline:hover{background:#fff7ed}
+.pz-btn-primary{background:#d64545;color:#fff;border:0}
+.pz-btn-ghost{background:#fff;border:1px solid #e5e7eb}
+.pz-user-name{color:#4b5563;font-size:14px}
+
+/* Burger */
+.pz-burger{display:none;margin-left:auto;width:42px;height:36px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;align-items:center;justify-content:center;gap:4px}
+.pz-burger span{display:block;width:20px;height:2px;background:#0f172a;transition:transform .2s ease,opacity .2s ease}
+.pz-burger.is-open span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.pz-burger.is-open span:nth-child(2){opacity:0}
+.pz-burger.is-open span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+
+/* Mobile */
+@media (max-width: 819px){
+  .pz-burger{display:flex}
+  .pz-actions--desktop{display:none}
+
+  .pz-nav{
+    position:absolute;left:0;right:0;top:64px;
+    background:#fff;border-bottom:1px solid #e5e7eb;
+    display:flex;flex-direction:column;gap:6px;padding:10px 12px;
+    transform:translateY(-12px);opacity:0;pointer-events:none;
+    transition:transform .18s ease, opacity .18s ease;
+  }
+  .pz-nav.open{transform:translateY(0);opacity:1;pointer-events:auto}
+
+  .pz-link{padding:12px;border-radius:12px}
+  .pz-actions--mobile{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+}
+
+/* Desktop */
+@media (min-width: 820px){
+  .pz-nav{display:flex}
+}
