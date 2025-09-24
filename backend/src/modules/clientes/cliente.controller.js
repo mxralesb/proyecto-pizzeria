@@ -282,3 +282,42 @@ export const registerClient = async (req, res) => {
     res.status(500).json({ error: "Error al registrar el cliente" });
   }
 };
+
+// ===== LISTADO ADMIN / STAFF =====
+export async function listClientes(req, res) {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 50, 200);
+    const offset = Number(req.query.offset) || 0;
+    const rows = await Cliente.findAll({
+      limit,
+      offset,
+      order: [["id_cliente", "DESC"]], // ajusta al nombre real de la PK
+      include: [
+        { model: Direccion, as: "direcciones" },
+        { model: Telefono, as: "telefonos" },
+      ],
+    });
+    res.json(rows);
+  } catch (e) {
+    console.error("listClientes error:", e);
+    res.status(500).json({ error: "Error al listar clientes" });
+  }
+}
+
+export async function getClienteById(req, res) {
+  try {
+    const id = req.params.id;
+    const row = await Cliente.findOne({
+      where: { id_cliente: id }, // ajusta al nombre real de la PK
+      include: [
+        { model: Direccion, as: "direcciones" },
+        { model: Telefono, as: "telefonos" },
+      ],
+    });
+    if (!row) return res.status(404).json({ error: "No encontrado" });
+    res.json(row);
+  } catch (e) {
+    console.error("getClienteById error:", e);
+    res.status(500).json({ error: "Error al obtener cliente" });
+  }
+}
