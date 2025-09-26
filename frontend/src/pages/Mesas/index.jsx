@@ -1,5 +1,41 @@
+// src/pages/Mesas/index.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/authContext";
+
+// ---- helpers de red: baseURL configurable ----
+const API_BASE =
+  import.meta.env.VITE_API_URL
+  || (window.location.origin.includes("onrender.com")
+        ? "https://TU-BACKEND.onrender.com" // ← cambia esto por la URL real de tu backend en Render
+        : "http://localhost:4000");
+
+async function apiGet(path, token) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!r.ok) {
+    const msg = await r.text().catch(() => "");
+    throw new Error(msg || `GET ${path} ${r.status}`);
+  }
+  return r.json();
+}
+
+async function apiPost(path, body, token) {
+  const r = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    let msg = "";
+    try { msg = (await r.json())?.error || ""; } catch {}
+    throw new Error(msg || `POST ${path} ${r.status}`);
+  }
+  return r.json();
+}
 
 function Badge({ children }) {
   return (
@@ -39,11 +75,8 @@ export default function MesasDashboard() {
     setLoading(true);
     setErr("");
     try {
-      const r = await fetch("http://localhost:4000/api/mesas", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok) throw new Error("No se pudo cargar");
-      const j = await r.json();
+      // ← ya no usamos localhost
+      const j = await apiGet("/api/mesas", token);
       setData({
         total: j?.total || 0,
         libres: j?.libres || [],
@@ -54,17 +87,16 @@ export default function MesasDashboard() {
       });
       setNow(Date.now());
     } catch (e) {
-      setErr("No se pudo cargar");
-      console.error(e);
+      console.error("Error cargando mesas:", e);
+      setErr(e.message || "No se pudo cargar");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
+  // timer de pantalla + sync periódico
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     const sync = setInterval(() => {
@@ -73,18 +105,15 @@ export default function MesasDashboard() {
         load().finally(() => (syncingRef.current = false));
       }
     }, 30000);
-    return () => {
-      clearInterval(t);
-      clearInterval(sync);
-    };
+    return () => { clearInterval(t); clearInterval(sync); };
   }, []);
 
+  // si alguna mesa vence, recarga
   useEffect(() => {
     const needsSync = (data.mesas || []).some((m) => {
       if (!m.ocupada_hasta) return false;
       const left = new Date(m.ocupada_hasta).getTime() - now;
-      if (m.estado === "ocupada" && left <= 0) return true;
-      if (m.estado === "limpieza" && left <= 0) return true;
+      if ((m.estado === "ocupada" || m.estado === "limpieza") && left <= 0) return true;
       return false;
     });
     if (needsSync && !syncingRef.current) {
@@ -104,47 +133,26 @@ export default function MesasDashboard() {
     [data]
   );
 
-  const post = async (path, body) => {
-    const r = await fetch(`http://localhost:4000/api/mesas${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) {
-      const x = await r.json().catch(() => ({}));
-      throw new Error(x?.error || "Error");
-    }
-    return r.json();
-  };
-
+  // acciones
   const onOcupar = async (id_mesa) => {
     try {
-      await post("/occupy", { id_mesa, minutos: 60 });
+      await apiPost("/api/mesas/occupy", { id_mesa, minutos: 60 }, token);
       await load();
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   };
 
   const onLiberar = async (id_mesa) => {
     try {
-      await post("/free", { id_mesa });
+      await apiPost("/api/mesas/free", { id_mesa }, token);
       await load();
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   };
 
   const onLiberarTrasLimpieza = async (id_mesa) => {
     try {
-      await post("/release-after-clean", { id_mesa });
+      await apiPost("/api/mesas/release-after-clean", { id_mesa }, token);
       await load();
-    } catch (e) {
-      alert(e.message);
-    }
+    } catch (e) { alert(e.message); }
   };
 
   return (
@@ -158,7 +166,7 @@ export default function MesasDashboard() {
         <Badge>Limpieza: {stats.limpieza}</Badge>
         <Badge>Reservadas: {stats.reservadas}</Badge>
         <button className="pz-btn pz-btn-outline" style={{ marginLeft: 8 }} onClick={load} disabled={loading}>
-          Actualizar
+          {loading ? "Cargando..." : "Actualizar"}
         </button>
       </div>
 
