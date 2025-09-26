@@ -1,12 +1,11 @@
 {
   "name": "frontend",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
+    "build": "cross-env ROLLUP_SKIP_NODEJS_NATIVE=1 vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -17,6 +16,8 @@
     "google-one-tap": "^1.0.6",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
+    "motion-dom": "^12.23.21",
+    "motion-utils": "^12.23.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.30.1"
@@ -32,5 +33,8 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
     "vite": "^7.1.2"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
