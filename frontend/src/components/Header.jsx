@@ -8,7 +8,7 @@ export default function Header() {
   const [open, setOpen] = useState(false);
   const navRef = useRef(null);
 
-  // Cierra el menú al pasar a desktop
+  // Cierra el menú al cambiar a desktop
   useEffect(() => {
     const onResize = () => {
       if (window.innerWidth >= 820) setOpen(false);
@@ -23,16 +23,6 @@ export default function Header() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, []);
-
-  // Cierra clic fuera
-  useEffect(() => {
-    const onClick = (e) => {
-      if (!open) return;
-      if (navRef.current && !navRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
-  }, [open]);
 
   const role = String(
     user?.role ?? user?.payload?.role ?? user?.data?.role ?? ""
@@ -75,7 +65,7 @@ export default function Header() {
           </div>
         </Link>
 
-        {/* Botón hamburguesa (SOLO móvil, icono circular) */}
+        {/* Botón hamburguesa (solo móvil) */}
         <button
           className={`pz-burger ${open ? "is-open" : ""}`}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
@@ -84,7 +74,6 @@ export default function Header() {
           onClick={() => setOpen((v) => !v)}
           type="button"
         >
-          {/* Icono: 3 líneas con stroke (no “rayitas”) */}
           <svg className="pz-burger-icon" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
             <line x1="4" y1="7"  x2="20" y2="7"  />
             <line x1="4" y1="12" x2="20" y2="12" />
