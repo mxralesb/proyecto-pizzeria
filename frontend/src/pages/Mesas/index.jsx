@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/authContext";
+import api from "../../api/requests";
 
 function Badge({ children }) {
   return (
@@ -20,8 +21,6 @@ function Badge({ children }) {
 
 export default function MesasDashboard() {
   const { user } = useAuth();
-  const token = user?.token || localStorage.getItem("token") || "";
-
   const [data, setData] = useState({
     total: 0,
     libres: [],
@@ -39,11 +38,9 @@ export default function MesasDashboard() {
     setLoading(true);
     setErr("");
     try {
-      const r = await fetch("http://localhost:4000/api/mesas", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!r.ok) throw new Error("No se pudo cargar");
-      const j = await r.json();
+      // ✅ Usa axios preconfigurado (api) -> respeta VITE_API_URL y añade Authorization
+      const r = await api.get("/mesas");
+      const j = r?.data || {};
       setData({
         total: j?.total || 0,
         libres: j?.libres || [],
@@ -54,17 +51,16 @@ export default function MesasDashboard() {
       });
       setNow(Date.now());
     } catch (e) {
-      setErr("No se pudo cargar");
       console.error(e);
+      setErr("No se pudo cargar");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
+  // reloj y autosync
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     const sync = setInterval(() => {
@@ -79,6 +75,7 @@ export default function MesasDashboard() {
     };
   }, []);
 
+  // si alguna mesa vence su tiempo, forzar sync
   useEffect(() => {
     const needsSync = (data.mesas || []).some((m) => {
       if (!m.ocupada_hasta) return false;
@@ -104,20 +101,10 @@ export default function MesasDashboard() {
     [data]
   );
 
+  // helpers de API (POST)
   const post = async (path, body) => {
-    const r = await fetch(`http://localhost:4000/api/mesas${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!r.ok) {
-      const x = await r.json().catch(() => ({}));
-      throw new Error(x?.error || "Error");
-    }
-    return r.json();
+    const r = await api.post(`/mesas${path}`, body);
+    return r.data;
   };
 
   const onOcupar = async (id_mesa) => {
@@ -125,7 +112,7 @@ export default function MesasDashboard() {
       await post("/occupy", { id_mesa, minutos: 60 });
       await load();
     } catch (e) {
-      alert(e.message);
+      alert(e?.response?.data?.error || e.message || "Error");
     }
   };
 
@@ -134,7 +121,7 @@ export default function MesasDashboard() {
       await post("/free", { id_mesa });
       await load();
     } catch (e) {
-      alert(e.message);
+      alert(e?.response?.data?.error || e.message || "Error");
     }
   };
 
@@ -143,7 +130,7 @@ export default function MesasDashboard() {
       await post("/release-after-clean", { id_mesa });
       await load();
     } catch (e) {
-      alert(e.message);
+      alert(e?.response?.data?.error || e.message || "Error");
     }
   };
 
