@@ -1,14 +1,15 @@
 import axios from "axios";
 
-// Toma la URL de la API del .env o usa el default
-const baseURL = import.meta.env.VITE_API_URL?.replace(/\/+$/, "") || "http://localhost:4000/api";
+// Base: usa VITE_API_URL en prod; fallback solo para dev local
+const baseURL =
+  (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
+  "http://localhost:4000/api";
 
 const instance = axios.create({
   baseURL,
   withCredentials: false,
 });
 
-// Agrega el token JWT si existe
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) config.headers.Authorization = `Bearer ${token}`;

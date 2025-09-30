@@ -25,7 +25,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-      /\.onrender\.com$/, // permite *.onrender.com (frontend en Render)
+      /\.onrender\.com$/, 
     ],
     credentials: true,
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
