@@ -39,7 +39,7 @@ export default function MesasDashboard() {
     setErr("");
     try {
       // ✅ Usa axios preconfigurado (api) -> respeta VITE_API_URL y añade Authorization
-      const r = await api.get("/mesas");
+      const r = await api.get("/api/mesas");
       const j = r?.data || {};
       setData({
         total: j?.total || 0,
