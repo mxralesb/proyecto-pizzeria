@@ -1,3 +1,4 @@
+// src/pages/Ops/OrdersOpsBoard.jsx
 import { useEffect, useMemo, useState } from "react";
 import {
   listOpsOrders,
@@ -7,11 +8,21 @@ import {
 } from "../../api/opsOrders";
 import { useAuth } from "../../context/authContext";
 
-const STATUS_ES = { PENDING: "Pendiente", READY: "Lista", DELIVERED: "Entregada", CANCELLED: "Cancelada" };
-const COURIER_ES = { ASSIGNED: "Asignado", ON_ROUTE: "En camino", ARRIVED: "Llegué al destino", DELIVERED: "Entregado" };
-const tStatus = (s) => STATUS_ES[s] || s || "";
+const STATUS_ES = {
+  PENDING: "Pendiente",
+  READY: "Lista",
+  DELIVERED: "Entregada",
+  CANCELLED: "Cancelada",
+};
+const COURIER_ES = {
+  ASSIGNED: "Asignado",
+  ON_ROUTE: "En camino",
+  ARRIVED: "Llegué al destino",
+  DELIVERED: "Entregado",
+};
+const tStatus  = (s) => STATUS_ES[s] || s || "";
 const tCourier = (s) => COURIER_ES[s] || s || "";
-const money = (n) => `Q ${Number(n || 0).toFixed(2)}`;
+const money    = (n) => `Q ${Number(n || 0).toFixed(2)}`;
 
 function RoleBadge({ text }) {
   return (
@@ -61,20 +72,27 @@ function ActionButton({ children, onClick, tone = "primary", disabled }) {
 function ItemsList({ items = [] }) {
   if (!items.length) return <span>—</span>;
   return (
-    <ul style={{ margin: "0", padding: "0 0 0 16px", lineHeight: 1.25 }}>
+    <ul style={{ margin: 0, padding: "0 0 0 16px", lineHeight: 1.25 }}>
       {items.map((it) => {
-        const id = it.id_ops_order_item ?? `${it.id_menu_item}-${it.note ?? ""}`;
-        const name = it.menuItem?.name || it.name || `Item ${it.id_menu_item}`;
+        const id =
+          it.id_ops_order_item ?? `${it.id_menu_item}-${it.note ?? ""}`;
+        const name =
+          it.menuItem?.name || it.name || `Item ${it.id_menu_item}`;
         const qty = Number(it.qty || 1);
-        const rowTotal = it.unit_price != null ? qty * Number(it.unit_price || 0) : null;
+        const rowTotal =
+          it.unit_price != null ? qty * Number(it.unit_price || 0) : null;
         return (
           <li key={id} style={{ margin: "3px 0" }}>
             {qty} × {name}
             {rowTotal != null && (
-              <span style={{ marginLeft: 8, color: "#6b7280", fontSize: 12 }}>{money(rowTotal)}</span>
+              <span style={{ marginLeft: 8, color: "#6b7280", fontSize: 12 }}>
+                {money(rowTotal)}
+              </span>
             )}
             {it.note && (
-              <span style={{ marginLeft: 8, color: "#6b7280", fontSize: 12 }}>({it.note})</span>
+              <span style={{ marginLeft: 8, color: "#6b7280", fontSize: 12 }}>
+                ({it.note})
+              </span>
             )}
           </li>
         );
@@ -111,14 +129,74 @@ function IngredientChips({ text }) {
   );
 }
 
+/** Normaliza una orden para que el render no dependa del backend */
+function normalizeOrder(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  // Algunos backends usan created_at / createdAt, etc.
+  const createdAt =
+    raw.createdAt || raw.created_at || raw.created || raw.date || null;
+
+  // Estados pueden venir en minúsculas o variantes (created, new, ready, delivered)
+  const s = String(raw.status || raw.state || "").toUpperCase();
+  let statusU = s;
+  if (!statusU) {
+    // heurística: si tiene delivered_at => DELIVERED
+    if (raw.delivered_at || raw.deliveredAt) statusU = "DELIVERED";
+    else statusU = "PENDING";
+  }
+  if (statusU === "CREATED" || statusU === "NEW") statusU = "PENDING";
+
+  // “Ready” puede venir como boolean o timestamp
+  const kitchen_ready_at =
+    raw.kitchen_ready_at ||
+    raw.kitchen_readyAt ||
+    (raw.is_ready ? new Date().toISOString() : null);
+
+  // items pueden venir en items / lines / order_items
+  const items =
+    raw.items ||
+    raw.lines ||
+    raw.order_items ||
+    [];
+
+  return {
+    id_ops_order: raw.id_ops_order || raw.id || raw.order_id || raw._id,
+    order_number:
+      raw.order_number || raw.code || raw.number || raw.nro || raw.id,
+    source: raw.source || raw.channel || "—",
+    status: statusU,
+    kitchen_ready_at,
+    delivered_at: raw.delivered_at || raw.deliveredAt || null,
+    courier_user_id: raw.courier_user_id || raw.courierId || null,
+    courier_name: raw.courier_name || raw.courier || null,
+    courier_status:
+      (raw.courier_status && String(raw.courier_status).toUpperCase()) ||
+      null,
+    customer_name: raw.customer_name || raw.customer?.name || null,
+    customer_phone: raw.customer_phone || raw.customer?.phone || null,
+    customer_address: raw.customer_address || raw.customer?.address || null,
+    ingredients_text:
+      raw.ingredients_text || raw.ingredients || raw.notes || "",
+    createdAt,
+    items,
+  };
+}
+
 export default function OrdersOpsBoard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
+  const [error, setError] = useState("");
 
-  const role = String(user?.role ?? user?.payload?.role ?? user?.data?.role ?? "").toLowerCase();
+  const role = String(
+    user?.role ?? user?.payload?.role ?? user?.data?.role ?? ""
+  ).toLowerCase();
   const empRole = String(
-    user?.employee_role ?? user?.payload?.employee_role ?? user?.data?.employee_role ?? ""
+    user?.employee_role ??
+      user?.payload?.employee_role ??
+      user?.data?.employee_role ??
+      ""
   ).toLowerCase();
 
   const isAdmin = role === "admin";
@@ -127,10 +205,16 @@ export default function OrdersOpsBoard() {
 
   const load = async () => {
     setLoading(true);
+    setError("");
     try {
-      const { data } = await listOpsOrders();
-      setRows(Array.isArray(data) ? data : []);
-    } catch {
+      const list = await listOpsOrders();
+      const normalized = list
+        .map(normalizeOrder)
+        .filter(Boolean);
+      setRows(normalized);
+    } catch (e) {
+      console.error("Error listOpsOrders:", e);
+      setError("No se pudieron obtener los pedidos.");
       setRows([]);
     } finally {
       setLoading(false);
@@ -219,11 +303,17 @@ export default function OrdersOpsBoard() {
 
   return (
     <main className="pz-container" style={{ paddingTop: 18, paddingBottom: 24 }}>
-      <h2 style={{ marginBottom: 12 }}>
-        Gestión de Órdenes (OPS) {!loading && <RoleBadge text="Actualizado" />}
-      </h2>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+        <h2 style={{ margin: 0 }}>Gestión de Órdenes (OPS)</h2>
+        {!loading && <RoleBadge text="Actualizado" />}
+        <button className="pz-btn pz-btn-outline" onClick={load} disabled={loading}>
+          {loading ? "Actualizando…" : "Actualizar"}
+        </button>
+      </div>
 
-      <Card title="Órdenes Pendientes">
+      {error && <div className="pz-alert">{error}</div>}
+
+      <Card title={`Órdenes Pendientes (${pending.length})`}>
         <Table head={["Número", "Proveniencia", "Detalles", "Ingredientes", "Fecha", "Acciones"]}>
           {pending.length === 0 ? (
             <tr>
@@ -242,7 +332,9 @@ export default function OrdersOpsBoard() {
                 <td style={{ padding: 10 }}>
                   <IngredientChips text={o.ingredients_text} />
                 </td>
-                <td style={{ padding: 10 }}>{new Date(o.createdAt).toLocaleString()}</td>
+                <td style={{ padding: 10 }}>
+                  {o.createdAt ? new Date(o.createdAt).toLocaleString() : "—"}
+                </td>
                 <td style={{ padding: 10 }}>
                   {isCook ? (
                     <ActionButton onClick={() => doReady(o.id_ops_order)}>Listo</ActionButton>
@@ -256,7 +348,7 @@ export default function OrdersOpsBoard() {
         </Table>
       </Card>
 
-      <Card title="Órdenes por recoger">
+      <Card title={`Órdenes por recoger (${ready.length})`}>
         <Table head={["Número", "Proveniencia", "Repartidor", "Estado repartidor", "Cliente", "Acciones"]}>
           {ready.length === 0 ? (
             <tr>
@@ -279,8 +371,12 @@ export default function OrdersOpsBoard() {
                   {o.customer_name ? (
                     <div style={{ display: "grid", gap: 2 }}>
                       <strong>{o.customer_name}</strong>
-                      <span style={{ fontSize: 12, color: "#6b7280" }}>{o.customer_phone || "s/tel"}</span>
-                      <span style={{ fontSize: 12, color: "#6b7280" }}>{o.customer_address || "s/dirección"}</span>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>
+                        {o.customer_phone || "s/tel"}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>
+                        {o.customer_address || "s/dirección"}
+                      </span>
                     </div>
                   ) : (
                     "—"
@@ -302,7 +398,7 @@ export default function OrdersOpsBoard() {
         </Table>
       </Card>
 
-      <Card title="Órdenes Entregadas">
+      <Card title={`Órdenes Entregadas (${delivered.length})`}>
         <Table head={["Número", "Proveniencia", "Detalles", "Repartidor", "Fecha Entrega"]}>
           {delivered.length === 0 ? (
             <tr>
