@@ -1,9 +1,16 @@
 import axios from "axios";
 
-// Base: usa VITE_API_URL en prod; fallback solo para dev local
-const baseURL =
-  (import.meta.env.VITE_API_URL && import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
-  "http://localhost:4000/api";
+// Toma VITE_API_URL o deduce desde window.location
+const fromEnv = import.meta.env.VITE_API_URL;
+
+// Normaliza y garantiza que termine en /api
+function normalizeBase(url) {
+  let u = (url || window.location.origin).replace(/\/+$/, "");
+  if (!/\/api$/.test(u)) u = `${u}/api`;
+  return u;
+}
+
+const baseURL = normalizeBase(fromEnv);
 
 const instance = axios.create({
   baseURL,
