@@ -1,3 +1,4 @@
+// frontend/src/pages/Employee/components/ModalForm.jsx
 import { useEffect, useMemo, useState } from "react";
 import api from "../../../api/requests";
 import styles from "./ModalForm.module.css";
@@ -80,17 +81,17 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
         console.debug("PATCH /employees/%s payload:", editing.id, base);
         await api.patch(`/employees/${editing.id}`, base);
       } else {
-        // Enviamos ambas variantes de nombres para la cuenta:
+        // Mandamos variantes de nombres (compat) y también un objeto account anidado
+        const emailNorm = userEmail.trim().toLowerCase();
         const account = {
-          userEmail: userEmail.trim().toLowerCase(),
+          userEmail: emailNorm,
           userPassword,
-          userRole,                 // variante 1
-          email: userEmail.trim().toLowerCase(),
+          userRole, // variante 1
+          email: emailNorm,
           password: userPassword,
-          role: userRole,           // variante 2
+          role: userRole, // variante 2
         };
-
-        const payload = { ...base, ...account };
+        const payload = { ...base, ...account, account: { email: emailNorm, password: userPassword, role: userRole } };
         console.debug("POST /employees payload:", payload);
         await api.post("/employees", payload);
       }
@@ -106,7 +107,6 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
         error?.message ||
         "No se pudo guardar";
 
-      // Log detallado y alert legible
       console.error("POST/PATCH /employees failed:", { status, data, error });
       const readable = `Error ${status || ""} ${msg}\n` + (data ? JSON.stringify(data, null, 2) : "");
       setServerErr(msg);
