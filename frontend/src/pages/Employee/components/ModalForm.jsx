@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-// Usa la MISMA instancia que el resto del proyecto
 import api from "../../../api/requests";
 import styles from "./ModalForm.module.css";
 
@@ -7,7 +6,7 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
   const isEdit = !!editing;
   const [saving, setSaving] = useState(false);
 
-  // Campos para crear la cuenta de usuario (solo en crear)
+  // Solo al crear usuario
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userRole, setUserRole] = useState("empleado");
@@ -17,9 +16,7 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
 
   const onlyLettersNoSpace = (v) => {
     let clean = v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
-    if (clean.length > 0) {
-      clean = clean.charAt(0).toUpperCase() + clean.slice(1);
-    }
+    if (clean.length > 0) clean = clean.charAt(0).toUpperCase() + clean.slice(1);
     return clean;
   };
   const onlyPhone = (v) => {
@@ -54,8 +51,8 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
     return e;
   }, [form, userEmail, userPassword, userRole, isEdit]);
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const submit = async (evt) => {
+    evt.preventDefault();
     if (Object.keys(val).length) {
       setErrors(val);
       return;
@@ -63,7 +60,6 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
     setSaving(true);
     setServerErr("");
     try {
-      // Normaliza payload base
       const base = {
         cui: (form.cui || "").replace(/\D/g, "") || null,
         primer_nombre: form.primer_nombre?.trim(),
@@ -74,36 +70,47 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
         apellido_casado: form.apellido_casado?.trim() || null,
         telefono: form.telefono.replace(/\s/g, ""),
         telefono_emergencia: form.telefono_emergencia ? form.telefono_emergencia.replace(/\s/g, "") : null,
-        fecha_contratacion: form.fecha_contratacion, // YYYY-MM-DD del input date
+        fecha_contratacion: form.fecha_contratacion, // YYYY-MM-DD
         salario: Number(form.salario),
         activo: !!form.activo,
         rol_id: Number(form.rol_id),
       };
 
       if (isEdit) {
+        console.debug("PATCH /employees/%s payload:", editing.id, base);
         await api.patch(`/employees/${editing.id}`, base);
       } else {
-        // OJO: estos nombres deben coincidir con lo que espera tu backend.
-        // Si tu API espera otros (p.ej. email/password/role), cámbialos aquí.
-        const payload = {
-          ...base,
+        // Enviamos ambas variantes de nombres para la cuenta:
+        const account = {
           userEmail: userEmail.trim().toLowerCase(),
           userPassword,
-          userRole, // "empleado" | "admin" (según tu API)
+          userRole,                 // variante 1
+          email: userEmail.trim().toLowerCase(),
+          password: userPassword,
+          role: userRole,           // variante 2
         };
+
+        const payload = { ...base, ...account };
+        console.debug("POST /employees payload:", payload);
         await api.post("/employees", payload);
       }
 
       await onSaved();
     } catch (error) {
+      const status = error?.response?.status;
+      const data = error?.response?.data;
       const msg =
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
+        data?.error ||
+        data?.message ||
+        (typeof data === "string" ? data : "") ||
         error?.message ||
         "No se pudo guardar";
-      setServerErr(String(msg));
-      console.error("POST /employees failed:", error?.response || error);
-      alert(String(msg)); // opcional
+
+      // Log detallado y alert legible
+      console.error("POST/PATCH /employees failed:", { status, data, error });
+      const readable = `Error ${status || ""} ${msg}\n` + (data ? JSON.stringify(data, null, 2) : "");
+      setServerErr(msg);
+      alert(readable || "No se pudo guardar");
     } finally {
       setSaving(false);
     }
