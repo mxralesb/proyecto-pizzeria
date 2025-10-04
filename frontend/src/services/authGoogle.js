@@ -46,10 +46,7 @@ export async function googleSignInAndGetIdToken() {
       window.google.accounts.id.prompt((notification) => {
         // Si el usuario cierra el prompt o hay error
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Intenta fallback con prompt otra vez o rechaza:
-          // reject(new Error("Usuario canceló o no se mostró el prompt de Google"));
-          // Segundo intento (opcional):
-          // window.google.accounts.id.prompt();
+           // window.google.accounts.id.prompt();
         }
       });
     } catch (e) {
