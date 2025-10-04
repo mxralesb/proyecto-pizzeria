@@ -11,13 +11,13 @@ export default function GoogleAuth() {
   const navigate = useNavigate();
   const { setAuth } = useAuth();
   const [err, setErr] = useState("");
+
   useEffect(() => {
     const exists = document.querySelector(`script[src="${GOOGLE_SRC}"]`);
     if (exists && window.google) {
       renderGoogleButton();
       return;
     }
-
     const s = document.createElement("script");
     s.src = GOOGLE_SRC;
     s.async = true;
@@ -25,22 +25,37 @@ export default function GoogleAuth() {
     s.onload = renderGoogleButton;
     s.onerror = () => setErr("No se pudo cargar Google OAuth.");
     document.head.appendChild(s);
+    // no cleanup necesario para este script
   }, []);
 
   const onCredential = async (resp) => {
     try {
       setErr("");
-      const idToken = resp?.credential;
+      const idToken = resp?.credential; // <- id_token de Google
       if (!idToken) {
         setErr("No se recibió el token de Google.");
         return;
       }
-      const { data } = await api.post("/auth/google", { idToken });
-      setAuth(data.token, data.user);
+
+      // Si quisieras mandar dirección/teléfono opcionales:
+      // const extra = { direccion: {...}, telefono: {...} };
+      // const { data } = await api.post("/auth/google-cliente", { idToken, ...extra });
+
+      const { data } = await api.post("/auth/google-cliente", { idToken });
+      if (!data?.token || !data?.user) {
+        setErr("Respuesta inválida del servidor.");
+        return;
+      }
+
+      setAuth(data.token, data.user); // guarda en contexto + localStorage (según tu implementación)
       navigate("/perfil", { replace: true });
     } catch (e) {
       console.error(e);
-      setErr("No se pudo autenticar con Google.");
+      const msg =
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        "No se pudo autenticar con Google.";
+      setErr(msg);
     }
   };
 
@@ -54,6 +69,8 @@ export default function GoogleAuth() {
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: onCredential,
+        ux_mode: "popup",
+        auto_select: false,
       });
 
       if (btnRef.current) {
@@ -66,6 +83,8 @@ export default function GoogleAuth() {
         });
       }
 
+      // opcional: intentamos mostrar One Tap
+      try { window.google.accounts.id.prompt(); } catch {}
     } catch (e) {
       console.error(e);
       setErr("No se pudo iniciar Google OAuth.");
