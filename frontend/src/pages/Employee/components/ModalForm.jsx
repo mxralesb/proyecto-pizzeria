@@ -1,18 +1,19 @@
-// frontend/src/pages/Employee/components/ModalForm.jsx
 import { useEffect, useMemo, useState } from "react";
-import api from "../../../api/client";
+// Usa la MISMA instancia que el resto del proyecto
+import api from "../../../api/requests";
 import styles from "./ModalForm.module.css";
 
 export default function ModalForm({ roles, form, setForm, onClose, onSaved, editing }) {
   const isEdit = !!editing;
   const [saving, setSaving] = useState(false);
 
-  // 🔑 Para creación de cuenta solo cuando creamos
+  // Campos para crear la cuenta de usuario (solo en crear)
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userRole, setUserRole] = useState("empleado");
 
   const [errors, setErrors] = useState({});
+  const [serverErr, setServerErr] = useState("");
 
   const onlyLettersNoSpace = (v) => {
     let clean = v.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/g, "");
@@ -26,7 +27,10 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
     return digits.replace(/(\d{4})(\d{0,4})/, (m, g1, g2) => (g2 ? `${g1} ${g2}` : g1));
   };
 
-  useEffect(() => setErrors({}), [form, userEmail, userPassword, userRole]);
+  useEffect(() => {
+    setErrors({});
+    setServerErr("");
+  }, [form, userEmail, userPassword, userRole]);
 
   const val = useMemo(() => {
     const e = {};
@@ -40,6 +44,7 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
 
     if (!form.salario || Number(form.salario) < 3275) e.salario = ">= Q3275.00";
     if (!form.rol_id) e.rol_id = "Selecciona un rol";
+    if (!form.fecha_contratacion) e.fecha_contratacion = "Requerida";
 
     if (!isEdit) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) e.userEmail = "Correo inválido";
@@ -56,18 +61,20 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
       return;
     }
     setSaving(true);
+    setServerErr("");
     try {
+      // Normaliza payload base
       const base = {
-        cui: form.cui || null,
-        primer_nombre: form.primer_nombre,
-        segundo_nombre: form.segundo_nombre || null,
-        otros_nombres: form.otros_nombres || null,
-        primer_apellido: form.primer_apellido,
-        segundo_apellido: form.segundo_apellido || null,
-        apellido_casado: form.apellido_casado || null,
+        cui: (form.cui || "").replace(/\D/g, "") || null,
+        primer_nombre: form.primer_nombre?.trim(),
+        segundo_nombre: form.segundo_nombre?.trim() || null,
+        otros_nombres: form.otros_nombres?.trim() || null,
+        primer_apellido: form.primer_apellido?.trim(),
+        segundo_apellido: form.segundo_apellido?.trim() || null,
+        apellido_casado: form.apellido_casado?.trim() || null,
         telefono: form.telefono.replace(/\s/g, ""),
         telefono_emergencia: form.telefono_emergencia ? form.telefono_emergencia.replace(/\s/g, "") : null,
-        fecha_contratacion: form.fecha_contratacion,
+        fecha_contratacion: form.fecha_contratacion, // YYYY-MM-DD del input date
         salario: Number(form.salario),
         activo: !!form.activo,
         rol_id: Number(form.rol_id),
@@ -76,16 +83,27 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
       if (isEdit) {
         await api.patch(`/employees/${editing.id}`, base);
       } else {
-        await api.post("/employees", {
+        // OJO: estos nombres deben coincidir con lo que espera tu backend.
+        // Si tu API espera otros (p.ej. email/password/role), cámbialos aquí.
+        const payload = {
           ...base,
           userEmail: userEmail.trim().toLowerCase(),
           userPassword,
-          userRole,
-        });
+          userRole, // "empleado" | "admin" (según tu API)
+        };
+        await api.post("/employees", payload);
       }
+
       await onSaved();
-    } catch {
-      alert("No se pudo guardar");
+    } catch (error) {
+      const msg =
+        error?.response?.data?.error ||
+        error?.response?.data?.message ||
+        error?.message ||
+        "No se pudo guardar";
+      setServerErr(String(msg));
+      console.error("POST /employees failed:", error?.response || error);
+      alert(String(msg)); // opcional
     } finally {
       setSaving(false);
     }
@@ -97,6 +115,8 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
     <div className={styles.wrap}>
       <div className={styles.card}>
         <h3>{isEdit ? "Editar empleado" : "Nuevo empleado"}</h3>
+
+        {serverErr && <div className="pz-alert">{serverErr}</div>}
 
         <form onSubmit={submit} className={styles.grid}>
           <label>
@@ -185,6 +205,7 @@ export default function ModalForm({ roles, form, setForm, onClose, onSaved, edit
               value={form.fecha_contratacion}
               max={hoy}
               onChange={(e) => setForm((f) => ({ ...f, fecha_contratacion: e.target.value }))}
+              className={errors.fecha_contratacion ? styles.err : ""}
             />
           </label>
 
