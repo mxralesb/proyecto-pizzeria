@@ -81,13 +81,11 @@ export default function RegisterClient() {
     try {
       const { data } = await registerClient(payload);
       localStorage.setItem("token", data.token);
-      localStorage.setItem(
-        "user",
-        JSON.stringify(data.user ?? { role: "cliente", name: `${form.nombre} ${form.apellido}` })
-      );
+      localStorage.setItem("user", JSON.stringify(data.user ?? { role: "cliente", name: `${form.nombre} ${form.apellido}` }));
       window.location.href = "/perfil";
     } catch (e2) {
-      setError(e2?.response?.data?.error || "No se pudo registrar");
+      const msg = e2?.response?.data?.error || e2?.response?.data?.message || "No se pudo registrar";
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -97,7 +95,7 @@ export default function RegisterClient() {
     setError("");
     setLoadingGoogle(true);
     try {
-      const { idToken } = await googleSignInAndGetIdToken();
+      const { idToken } = await googleSignInAndGetIdToken(); // obtiene idToken via GIS
       const { data } = await loginWithGoogleIdTokenCliente(idToken, {
         direccion: form.direccion,
         telefono: {
@@ -108,14 +106,18 @@ export default function RegisterClient() {
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
       window.location.href = "/perfil";
-    } catch {
-      setError("No se pudo completar el registro con Google");
+    } catch (e2) {
+      const msg =
+        e2?.response?.data?.error ||
+        e2?.response?.data?.detail ||
+        e2?.response?.data?.message ||
+        "No se pudo completar el registro con Google";
+      setError(msg);
     } finally {
       setLoadingGoogle(false);
     }
   };
 
-  // Animaciones suaves
   const cardAnim = { initial: { opacity: 0, y: 10, scale: 0.98 }, animate: { opacity: 1, y: 0, scale: 1 } };
 
   return (
